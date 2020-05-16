@@ -16,7 +16,7 @@ const (
 )
 
 const (
-	LIMIT = 50
+	LIMIT = 45
 	MAXLENGTH = LIMIT + 1
 )
 
@@ -71,23 +71,33 @@ func search(ss ssdata.SSSet, start int, prefix string) {
 func findMaxSets(size int, began time.Time) {
 	best = SearchResult{-1, []ssdata.SSSet{}}
 	ss := ssdata.NewSSSet(size)
-	start := time.Now()
+//	start := time.Now()
 	search(ss, 1, "\t\t\t\t\t")
 	ended := time.Now()
+	// fmt.Printf(
+	// 	"%4d\t%4d\t%5d\t%v\t%v\n",
+	// 	size, best.Weight, len(best.Sets),
+	// 	ended.Sub(began), ended.Sub(start),
+	// )
 	fmt.Printf(
-		"%4d\t%4d\t%5d\t%v\t%v\n",
+		"%d | %d | %d | %v\n",
 		size, best.Weight, len(best.Sets),
-		ended.Sub(began), ended.Sub(start),
+		ended.Sub(began),
 	)
 }
 
 func mainSearch() {
 	fmt.Printf("Salem-Spencer Search (first Go implementation)\n")
-	fmt.Printf("Size\t Wgt\tCount\tt net\tt item\n")
+	fmt.Printf("N | Size | Count | Total Time\n")
+	fmt.Printf(":_: | :-: | :-: | :_:\n")
 	began := time.Now()
 	for size := 1; size <=LIMIT; size++ {
 		findMaxSets(size, began)
 	}
+	// fmt.Printf("\nMaximal sets for %d\n", LIMIT)
+	// for _, example := range best.Sets {
+	// 	fmt.Printf("\t%v\n", example)
+	// }
 }
 
 func main() {

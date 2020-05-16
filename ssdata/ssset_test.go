@@ -86,4 +86,8 @@ func TestMoves(t *testing.T) {
 	sAlso, _ = sAlso.Move(3)
 	expectEqualSSSets(t, "sFull:sAlso", sFull, sAlso)
 	expectWeight(t, sAlso, 2)
+
+	sAlso, _ = sAlso.Move(2)
+	expectDifferentSSSets(t, "sFull:Salso", sFull, sAlso)
+	expectWeight(t, sAlso, 3)
 }
