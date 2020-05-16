@@ -39,7 +39,7 @@ Hence, this little project, and the choice of Go.
 
 I have already discovered a few minor optimizations for performance, but need to go further before it's practical to take on the current record of _N_ through 140.
 
-###Salem-Spencer Search (first Go implementation)
+### Salem-Spencer Search (first Go implementation)
 
 N | Size | Count | Total Time
 :-: | :-: | :-: | :-:
