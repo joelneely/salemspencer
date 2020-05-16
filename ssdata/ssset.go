@@ -18,14 +18,13 @@ const (
 
 type SSSet struct {
 	Size, Weight int
-	Data []uint8
+	Data [MAXLENGTH]uint8
 }
 
-func MakeSSSet(d []uint8, size int) SSSet {
-	dd := []uint8{}
-	dd = append(dd, d...)
+func MakeSSSet(d [MAXLENGTH]uint8, size int) SSSet {
+	dd := d
 	wt := 0
-	for _, state := range d {
+	for _, state := range dd {
 		if state == CLOSED {
 			wt++
 		}
@@ -34,10 +33,7 @@ func MakeSSSet(d []uint8, size int) SSSet {
 }
 
 func NewSSSet(size int) SSSet {
-	empty := make([]uint8, size+1)
-	for i := range empty {
-		empty[i] = OPEN
-	}
+	empty := [MAXLENGTH]uint8{}
 	return MakeSSSet(empty, size)
 }
 
@@ -48,8 +44,8 @@ func (this SSSet) Equals(that SSSet) bool {
 	if this.Weight != that.Weight {
 		return false;
 	}
-	for i, here := range this.Data {
-		if here != that.Data[i] {
+	for i := 1; i <= this.Size; i++ {
+		if this.Data[i] != that.Data[i] {
 			return false;
 		}
 	}
@@ -64,7 +60,7 @@ func (this SSSet) IsOpenAt(move int) bool {
 	return this.Data[move] == OPEN
 }
 
-func checkBlock(dd []uint8, i, j int) {
+func checkBlock(dd *[MAXLENGTH]uint8, i, j int) {
 	if dd[i] == CLOSED && dd[j] != CLOSED {
 		dd[j] = BLOCKED
 	}
@@ -78,28 +74,27 @@ func (this SSSet) Move(move int) (SSSet, bool) {
 	if !this.IsOpenAt(move) {
 		return this, false
 	}
-	dd := make([]uint8, len(this.Data))
-	copy(dd, this.Data)
+	dd := this.Data
 	//
 	// a closed position on one side of move closes its mirror image
 	//
 	for i, j := move - 1, move + 1; 1 <= i && j <= this.Size; i, j = i - 1, j + 1 {
-		checkBlock(dd, i, j)
-		checkBlock(dd, j, i)
+		checkBlock(&dd, i, j)
+		checkBlock(&dd, j, i)
 	}
 	//
 	// check for triples to the left of move
 	//
 	for i, j := move - 2, move - 1; 1 <= i; i, j = i - 2, j - 1 {
-		checkBlock(dd, i, j)
-		checkBlock(dd, j, i)
+		checkBlock(&dd, i, j)
+		checkBlock(&dd, j, i)
 	}
 	//
 	// check for triples to the right of move
 	//
 	for i, j := move + 1, move + 2; j <= this.Size; i, j = i + 1, j + 2 {
-		checkBlock(dd, i, j)
-		checkBlock(dd, j, i)
+		checkBlock(&dd, i, j)
+		checkBlock(&dd, j, i)
 	}
 	dd[move] = CLOSED
 	return MakeSSSet(dd, this.Size), true
@@ -115,8 +110,7 @@ func (this SSSet) MoveLR(move int) (SSSet, bool) {
 	if !this.IsOpenAt(move) {
 		return this, false
 	}
-	dd := make([]uint8, len(this.Data))
-	copy(dd, this.Data)
+	dd := this.Data
 	for i, j := move - 1, move + 1; 1 <= i && j <= this.Size; i, j = i - 1, j + 1 {
 		if this.IsClosedAt(i) {
 			dd[j] = BLOCKED
@@ -127,5 +121,5 @@ func (this SSSet) MoveLR(move int) (SSSet, bool) {
 }
 
 func (s SSSet) String() string {
-	return fmt.Sprintf("{%d %d %v}", s.Size, s.Weight, s.Data[1:])
+	return fmt.Sprintf("{%d %d %v}", s.Size, s.Weight, s.Data[1:s.Size+1])
 }
