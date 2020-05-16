@@ -9,17 +9,6 @@ import (
 	"gospikes/salemspencer/ssdata"
 )
 
-const (
-	OPEN    = 0
-	BLOCKED = 1
-	CLOSED  = 2
-)
-
-const (
-	LIMIT = 45
-	MAXLENGTH = LIMIT + 1
-)
-
 type SearchResult struct {
 	Weight int
 	Sets []ssdata.SSSet
@@ -91,7 +80,7 @@ func mainSearch() {
 	fmt.Printf("N | Size | Count | Total Time\n")
 	fmt.Printf(":_: | :-: | :-: | :_:\n")
 	began := time.Now()
-	for size := 1; size <=LIMIT; size++ {
+	for size := 1; size <=ssdata.LIMIT; size++ {
 		findMaxSets(size, began)
 	}
 	// fmt.Printf("\nMaximal sets for %d\n", LIMIT)

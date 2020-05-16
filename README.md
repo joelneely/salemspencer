@@ -91,5 +91,4 @@ N | Size | Count | Total Time
 
 ### To-do
 
-* I failed to move all of the constant declarations from ssmain.go to ssdata/ssset.go, so need to fix that.
 * The current implementation of SSSet uses slices (`[]uint8`), which prevents the use of a hashmap to store previously-found sets. I previously made a quick-and-dirty stab at replacing the data slice with an array, but it was too dirty to work, so I backed it out. I believe that fixing this issue will improve performance.
