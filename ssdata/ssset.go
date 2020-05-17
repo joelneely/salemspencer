@@ -12,7 +12,7 @@ const (
 )
 
 const (
-	LIMIT = 45
+	LIMIT = 75
 	MAXLENGTH = LIMIT + 1
 )
 

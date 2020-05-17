@@ -60,7 +60,7 @@ func findMaxSets(size int, began time.Time) {
 func mainSearch() {
 	fmt.Printf("Salem-Spencer Search (revised Go implementation)\n")
 	fmt.Printf("N | Size | Count | Total time | Unit time\n")
-	fmt.Printf(":-: | :-: | :-: | :-:\n")
+	fmt.Printf(":-: | :-: | :-: | :-: | :-:\n")
 	began := time.Now()
 	for size := 1; size <=ssdata.LIMIT; size++ {
 		findMaxSets(size, began)

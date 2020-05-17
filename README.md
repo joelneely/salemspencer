@@ -42,7 +42,7 @@ I have already discovered a few minor optimizations for performance, but need to
 ### Salem-Spencer Search (revised Go implementation)
 
 N | Size | Count | Total time | Unit time
-:-: | :-: | :-: | :-:
+:-: | :-: | :-: | :-: | :-:
 1 | 1 | 1 | 10.458µs | 9.846µs
 2 | 2 | 1 | 39.472µs | 1.324µs
 3 | 2 | 3 | 46.723µs | 4.37µs
