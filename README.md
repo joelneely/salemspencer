@@ -39,60 +39,60 @@ Hence, this little project, and the choice of Go.
 
 I have already discovered a few minor optimizations for performance, but need to go further before it's practical to take on the current record of _N_ through 140.
 
-### Salem-Spencer Search (first Go implementation)
+### Salem-Spencer Search (revised Go implementation)
 
-N | Size | Count | Total Time
+N | Size | Count | Total time | Unit time
 :-: | :-: | :-: | :-:
-1 | 1 | 1 | 3.843µs
-2 | 2 | 1 | 40.539µs
-3 | 2 | 3 | 87.759µs
-4 | 3 | 2 | 112.956µs
-5 | 4 | 1 | 125.046µs
-6 | 4 | 4 | 147.936µs
-7 | 4 | 10 | 211.995µs
-8 | 4 | 25 | 367.726µs
-9 | 5 | 4 | 466.356µs
-10 | 5 | 24 | 640.309µs
-11 | 6 | 7 | 835.443µs
-12 | 6 | 25 | 1.096034ms
-13 | 7 | 6 | 1.339049ms
-14 | 8 | 1 | 1.650173ms
-15 | 8 | 4 | 2.086159ms
-16 | 8 | 14 | 2.926158ms
-17 | 8 | 43 | 4.029673ms
-18 | 8 | 97 | 5.657035ms
-19 | 8 | 220 | 8.452234ms
-20 | 9 | 2 | 11.396026ms
-21 | 9 | 18 | 16.009507ms
-22 | 9 | 62 | 21.611098ms
-23 | 9 | 232 | 29.854792ms
-24 | 10 | 2 | 38.995551ms
-25 | 10 | 33 | 53.477444ms
-26 | 11 | 2 | 71.132202ms
-27 | 11 | 12 | 97.051327ms
-28 | 11 | 36 | 135.48256ms
-29 | 11 | 106 | 194.488647ms
-30 | 12 | 1 | 266.474042ms
-31 | 12 | 11 | 369.880037ms
-32 | 13 | 2 | 497.291588ms
-33 | 13 | 4 | 684.022605ms
-34 | 13 | 14 | 966.744526ms
-35 | 13 | 40 | 1.386886481s
-36 | 14 | 2 | 1.870248927s
-37 | 14 | 4 | 2.586800647s
-38 | 14 | 86 | 3.641474187s
-39 | 14 | 307 | 5.185412762s
-40 | 15 | 20 | 6.966690355s
-41 | 16 | 1 | 8.975331207s
-42 | 16 | 4 | 11.928156667s
-43 | 16 | 14 | 16.282357294s
-44 | 16 | 41 | 22.592319016s
-45 | 16 | 99 | 31.730036466s
+1 | 1 | 1 | 10.458µs | 9.846µs
+2 | 2 | 1 | 39.472µs | 1.324µs
+3 | 2 | 3 | 46.723µs | 4.37µs
+4 | 3 | 2 | 52.377µs | 2.824µs
+5 | 4 | 1 | 63.14µs | 8.124µs
+6 | 4 | 4 | 75.248µs | 9.21µs
+7 | 4 | 10 | 129.206µs | 51.309µs
+8 | 4 | 25 | 161.9µs | 28.946µs
+9 | 5 | 4 | 192.948µs | 27.688µs
+10 | 5 | 24 | 252.95µs | 54.929µs
+11 | 6 | 7 | 319.695µs | 61.868µs
+12 | 6 | 25 | 431.707µs | 108.826µs
+13 | 7 | 6 | 567.916µs | 131.51µs
+14 | 8 | 1 | 742.112µs | 169.605µs
+15 | 8 | 4 | 1.02709ms | 280.828µs
+16 | 8 | 14 | 1.488549ms | 456.88µs
+17 | 8 | 43 | 2.251725ms | 758.899µs
+18 | 8 | 97 | 3.498938ms | 1.242416ms
+19 | 8 | 220 | 5.294901ms | 1.789115ms
+20 | 9 | 2 | 7.31615ms | 2.016582ms
+21 | 9 | 18 | 10.362176ms | 3.041573ms
+22 | 9 | 62 | 15.03003ms | 4.663711ms
+23 | 9 | 232 | 21.901343ms | 6.855117ms
+24 | 10 | 2 | 29.788852ms | 7.875433ms
+25 | 10 | 33 | 40.461324ms | 10.665428ms
+26 | 11 | 2 | 54.733126ms | 14.258ms
+27 | 11 | 12 | 73.614609ms | 18.866431ms
+28 | 11 | 36 | 103.358128ms | 29.728164ms
+29 | 11 | 106 | 145.85737ms | 42.481511ms
+30 | 12 | 1 | 196.780976ms | 50.906935ms
+31 | 12 | 11 | 273.502778ms | 76.703212ms
+32 | 13 | 2 | 359.195864ms | 85.675736ms
+33 | 13 | 4 | 487.156511ms | 127.944688ms
+34 | 13 | 14 | 679.408913ms | 192.217127ms
+35 | 13 | 40 | 960.444445ms | 281.019276ms
+36 | 14 | 2 | 1.286233047s | 325.773181ms
+37 | 14 | 4 | 1.76699717s | 480.746023ms
+38 | 14 | 86 | 2.471030608s | 704.016256ms
+39 | 14 | 307 | 3.497364885s | 1.026316827s
+40 | 15 | 20 | 4.685364008s | 1.187981077s
+41 | 16 | 1 | 6.015981032s | 1.330598588s
+42 | 16 | 4 | 7.964285081s | 1.94828555s
+43 | 16 | 14 | 10.788987051s | 2.824683937s
+44 | 16 | 41 | 14.890528236s | 4.101522858s
+45 | 16 | 99 | 20.800035648s | 5.909489448s
 
 ### To-do
 
-* The current implementation of SSSet uses slices (`[]uint8`), which prevents the use of a hashmap to store previously-found sets. I previously made a quick-and-dirty stab at replacing the data slice with an array, but it was too dirty to work, so I backed it out. I believe that fixing this issue will improve performance.
 
 ### Done
 
 * I had failed to move all of the constant declarations from ssmain.go to ssdata/ssset.go, so needed to fix that.
+* The first implementation of SSSet.data used slices (`[]uint8`), which prevented the use of a hashmap to store previously-found sets. I replacing that slice with an array, then replaced the slice holding maximal set with a map (eliminating the array search to prevent duplicates). These two changes reduced the processing time by about 1/3 (the previous total time for _N_=45 was 31.73s), with most of the gains coming from the first of those two changes.
