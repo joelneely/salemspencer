@@ -1,4 +1,4 @@
-// Starting to work on the golang version of salem-spencer sets,
+// Working on a golang version of Salem-Spencer sets,
 // with the goal of beating the number of values currently shown
 // on https://oeis.org/A262347 (contains a link to n = 1..140)
 package main
@@ -9,65 +9,47 @@ import (
 	"gospikes/salemspencer/ssdata"
 )
 
+//
+// changing the sets to hash map to see whether performance improves
+//
+
 type SearchResult struct {
 	Weight int
-	Sets []ssdata.SSSet
+	Sets map[ssdata.SSSet] bool
 }
 
 var best SearchResult
 
-func intMax(m, n int) int {
-	if m >= n {
-		return m
-	} else {
-		return n
-	}
-}
-
 func search(ss ssdata.SSSet, start int, prefix string) {
-	// fmt.Printf("%s%d in %v ; %v ", prefix, start, ss, best)
+
 	if ss.Weight + ss.Size - start + 1 < best.Weight {
 		return
 	}
+
 	if ss.Weight == best.Weight {
-		found := false
-		for _, s := range best.Sets {
-			if ss.Equals(s) {
-				found = false
-				break
-			}
-		}
-		if !found {
-			best.Sets = append(best.Sets, ss)
-		}
-		// fmt.Printf("=,%5v -> %v", found, best)
+		best.Sets[ss] = true
 	}
+
 	if ss.Weight > best.Weight {
 		best.Weight = ss.Weight
-		best.Sets = append(best.Sets[:0], ss)
-		// fmt.Printf(">       -> %v", best)
+		best.Sets = make(map[ssdata.SSSet] bool)
+		best.Sets[ss] = true
 	}
-	// fmt.Printf("\n")
+
 	for i := start; i <= ss.Size; i++ {
 		if ss.IsOpenAt(i) {
 			next, _ := ss.MoveLR(i)
 			search(next, i + 1, prefix + "\t")
 		}
 	}
-	// fmt.Printf("%s <== %v\n", prefix, best)
 }
 
 func findMaxSets(size int, began time.Time) {
-	best = SearchResult{-1, []ssdata.SSSet{}}
+	best = SearchResult{-1, make(map[ssdata.SSSet] bool)}
 	ss := ssdata.NewSSSet(size)
 	start := time.Now()
 	search(ss, 1, "\t\t\t\t\t")
 	ended := time.Now()
-	// fmt.Printf(
-	// 	"%4d\t%4d\t%5d\t%v\t%v\n",
-	// 	size, best.Weight, len(best.Sets),
-	// 	ended.Sub(began), ended.Sub(start),
-	// )
 	fmt.Printf(
 		"%d | %d | %d | %v | %v\n",
 		size, best.Weight, len(best.Sets),
@@ -76,9 +58,9 @@ func findMaxSets(size int, began time.Time) {
 }
 
 func mainSearch() {
-	fmt.Printf("Salem-Spencer Search (first Go implementation)\n")
+	fmt.Printf("Salem-Spencer Search (revised Go implementation)\n")
 	fmt.Printf("N | Size | Count | Total time | Unit time\n")
-	fmt.Printf(":_: | :-: | :-: | :_:\n")
+	fmt.Printf(":-: | :-: | :-: | :-:\n")
 	began := time.Now()
 	for size := 1; size <=ssdata.LIMIT; size++ {
 		findMaxSets(size, began)
