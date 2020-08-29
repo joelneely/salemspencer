@@ -37,6 +37,9 @@ func NewSSSet(size int) SSSet {
 	return MakeSSSet(empty, size)
 }
 
+// TODO: examine the effect of modifying the methods to take a pointer
+// in other words, will that eliminate copying and speed up the code?
+
 func (this SSSet) Equals(that SSSet) bool {
 	if this.Size != that.Size {
 		return false;
