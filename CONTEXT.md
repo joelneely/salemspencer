@@ -10,16 +10,19 @@ The Web Helper Framework is a Go-based web application that provides a simple in
 
 1. **Core Functionality**
    - HTTP server with automatic browser opening
+   - Server readiness check before opening browser (prevents "localhost can't be reached" errors)
    - Three-panel web interface (input, standardized, result)
-   - Text standardization (removes line breaks, normalizes whitespace)
+   - Text standardization (removes all line breaks including Unicode separators, normalizes whitespace)
    - Text processing (uppercase conversion)
    - Copy to clipboard functionality
+   - Robust static file path resolution (works regardless of execution context)
 
 2. **Code Quality**
-   - Comprehensive unit tests (25+ test cases)
+   - Comprehensive unit tests (35+ test cases)
    - All tests passing
    - No linter errors
    - Clean code structure
+   - Test-driven development (TDD) methodology
 
 3. **Documentation**
    - README.md with usage instructions
@@ -34,6 +37,9 @@ The Web Helper Framework is a Go-based web application that provides a simple in
 The `StandardizeInput()` function:
 - Trims leading/trailing whitespace
 - **Replaces all newlines with spaces** (allows natural text wrapping)
+  - Handles standard newlines (`\r`, `\n`)
+  - Handles Unicode line separator (U+2028)
+  - Handles Unicode paragraph separator (U+2029)
 - Collapses multiple spaces and tabs into single spaces
 - Returns a single-line string suitable for textarea display
 
@@ -41,7 +47,18 @@ Example:
 ```
 Input:  "hello\n\nworld"
 Output: "hello world"
+
+Input:  "hello\u2028world\u2029test"
+Output: "hello world test"
 ```
+
+#### Textarea Display Behavior
+
+The standardized and result textareas are configured to:
+- Wrap text naturally based on width (`wrap="soft"` attribute)
+- Use CSS properties (`white-space: normal`, `word-wrap: break-word`) to ensure proper wrapping
+- Display text without preserving original line breaks
+- Only break to new lines when necessary due to text length
 
 #### Text Processing Behavior
 
@@ -66,25 +83,28 @@ webhelper/
 ├── ARCHITECTURE.md         # Technical architecture
 ├── CONTEXT.md              # This file - project context
 ├── go.mod                  # Go module definition
-├── main.go                 # Entry point (90 lines)
-├── main_test.go            # Tests for main.go
-├── handlers.go             # HTTP handlers (105 lines)
-├── handlers_test.go        # Tests for handlers.go
-├── processor.go            # Text processing (33 lines)
-├── processor_test.go       # Tests for processor.go
+├── main.go                 # Entry point (server setup, browser opening, readiness check)
+├── main_test.go            # Tests for main.go (browser opening, server readiness)
+├── handlers.go             # HTTP handlers (includes getStaticDir function)
+├── handlers_test.go        # Tests for handlers.go (includes getStaticDir test)
+├── processor.go            # Text processing (Unicode separator support)
+├── processor_test.go       # Tests for processor.go (Unicode separator tests)
 └── static/
-    ├── index.html          # Web interface (116 lines)
-    └── style.css           # Styling (161 lines)
+    ├── index.html          # Web interface (with wrap="soft" attributes)
+    └── style.css           # Styling (text wrapping properties)
 ```
 
 ### Test Coverage
 
 **processor_test.go:**
-- `TestStandardizeInput`: 11 test cases
+- `TestStandardizeInput`: 15 test cases
   - Empty strings
   - Simple text
   - Whitespace handling
-  - Newline removal
+  - Newline removal (`\r`, `\n`)
+  - Unicode line separator (U+2028)
+  - Unicode paragraph separator (U+2029)
+  - Mixed newlines and Unicode separators
   - Mixed whitespace
   - Unicode support
 
@@ -104,10 +124,41 @@ webhelper/
   - Wrong HTTP methods
 - `TestHandleStatic`: Static file serving
 - `TestHandleProcessIntegration`: End-to-end flow tests
+  - Includes Unicode separator tests
+- `TestGetStaticDir`: Static directory path resolution
+  - Verifies static directory can be found
+  - Checks for required files (index.html, style.css)
 
 **main_test.go:**
 - `TestOpenBrowser`: Browser opening function tests
-- Limited testing due to OS constraints
+- `TestOpenBrowserUnsupportedOS`: OS compatibility tests
+- `TestWaitForServerReady`: Server readiness verification
+  - Tests server ready immediately
+  - Tests timeout scenarios
+  - Tests various HTTP status codes
+
+### Recent Improvements
+
+1. **Unicode Separator Support**
+   - Added support for Unicode line separator (U+2028) and paragraph separator (U+2029)
+   - `StandardizeInput()` now handles all newline types comprehensively
+   - Added test cases for Unicode separators
+
+2. **Textarea Wrapping**
+   - Updated CSS with `white-space: normal`, `word-wrap: break-word`, `overflow-wrap: break-word`
+   - Added `wrap="soft"` attribute to textareas
+   - Ensures text wraps naturally without preserving original line breaks
+
+3. **Static File Path Resolution**
+   - Implemented `getStaticDir()` function for robust path resolution
+   - Works regardless of execution context (development, production, subdirectories)
+   - Added comprehensive test coverage
+
+4. **Server Readiness Check**
+   - Added `waitForServerReady()` function to verify server is accepting connections
+   - Browser opens only after server is ready (prevents connection errors)
+   - Polls server with HTTP requests before opening browser
+   - Added test coverage for readiness scenarios
 
 ### Git History
 
@@ -132,6 +183,11 @@ webhelper/
 
 3. **File-Based Static Assets**
    - Static files served from filesystem
+   - `getStaticDir()` function finds static directory reliably:
+     - Checks current working directory first
+     - Falls back to executable directory
+     - Handles binaries in subdirectories (e.g., `bin/`)
+     - Works with `go run` during development
    - Easy to modify without recompiling
    - Could be embedded later if needed
 
@@ -161,8 +217,11 @@ webhelper/
    - Serves files from `static/` directory
 
 4. **Browser Opening**
+   - Server readiness check ensures browser opens only after server is accepting connections
+   - `waitForServerReady()` polls server with HTTP requests before opening browser
+   - Prevents "localhost can't be reached" errors
    - May fail on systems without browser commands
-   - No fallback mechanism beyond logging
+   - Fallback: logs warning and provides manual URL if browser opening fails
 
 ### Future Enhancement Ideas
 
@@ -258,7 +317,14 @@ PORT=3000 ./webhelper
 
 **Browser doesn't open:**
 - Check that browser command exists (`open`, `xdg-open`, or `cmd`)
-- Manually navigate to `http://localhost:8080`
+- The server now waits for readiness before opening browser (up to 5 seconds)
+- If browser still doesn't open, manually navigate to `http://localhost:8080`
+- Check server logs for any startup errors
+
+**Static files not found:**
+- The `getStaticDir()` function automatically finds the static directory
+- Ensure you're running from the project root or have the `static/` directory accessible
+- The function checks multiple locations automatically
 
 **Port already in use:**
 - Change port using `PORT` environment variable
