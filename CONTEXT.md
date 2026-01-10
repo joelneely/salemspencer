@@ -209,6 +209,12 @@ webhelper/
    - Add tests in `processor_test.go`
    - Update documentation
 
+4. **Committing Changes**
+   - **MANDATORY**: Run `go test -v ./...` before committing any changes
+   - **DO NOT COMMIT** if any tests fail
+   - Ensure all tests pass before creating a commit
+   - This ensures code quality and prevents regressions
+
 ### Environment Setup
 
 **Required:**
