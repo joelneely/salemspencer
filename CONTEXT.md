@@ -193,26 +193,39 @@ webhelper/
 
 ### Development Workflow
 
-1. **Making Changes**
-   - Modify source files
-   - Run `go test -v ./...` to verify tests
+**Test-Driven Development (TDD) Approach:**
+- This project follows a **test-driven development** methodology
+- Changes are **described via tests first** before implementation
+- Proposed changes are **verified by running tests** throughout development
+- Write tests that describe the desired behavior, then implement to make tests pass
+
+1. **Making Changes (TDD Process)**
+   - **Write tests first** that describe the desired behavior/change
+   - Run `go test -v ./...` to see tests fail (red phase)
+   - Implement the minimal code to make tests pass (green phase)
+   - Refactor if needed while keeping tests passing
+   - Run `go test -v ./...` to verify all tests pass
    - Run `go build` to check compilation
-   - Test manually by running `./webhelper`
+   - Test manually by running `./webhelper` if applicable
 
 2. **Adding Tests**
    - Add test cases to appropriate `*_test.go` file
    - Follow existing test patterns
    - Ensure all edge cases are covered
+   - Tests should clearly describe the expected behavior
 
 3. **Extending Processing**
-   - Modify `ProcessInput()` in `processor.go`
-   - Add tests in `processor_test.go`
+   - Write tests in `processor_test.go` that describe the new processing behavior
+   - Run tests to verify they fail initially
+   - Modify `ProcessInput()` in `processor.go` to implement the feature
+   - Run tests again to verify they pass
    - Update documentation
 
 4. **Committing Changes**
    - **MANDATORY**: Run `go test -v ./...` before committing any changes
    - **DO NOT COMMIT** if any tests fail
-   - Ensure all tests pass before creating a commit
+   - Following TDD, tests should already be passing (green phase)
+   - Verify all tests pass before creating a commit
    - This ensures code quality and prevents regressions
 
 ### Environment Setup
