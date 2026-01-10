@@ -1,8 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestOpenBrowser(t *testing.T) {
@@ -65,6 +68,69 @@ func TestOpenBrowserUnsupportedOS(t *testing.T) {
 	
 	// The actual test would require mocking or a way to change runtime.GOOS,
 	// which isn't feasible. The function implementation handles this correctly.
+}
+
+func TestWaitForServerReady(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupServer    func() *httptest.Server
+		timeout        time.Duration
+		expectedResult bool
+	}{
+		{
+			name: "server ready immediately",
+			setupServer: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}))
+			},
+			timeout:        2 * time.Second,
+			expectedResult: true,
+		},
+		{
+			name: "server not ready (timeout)",
+			setupServer: func() *httptest.Server {
+				// Return nil to simulate no server
+				return nil
+			},
+			timeout:        100 * time.Millisecond,
+			expectedResult: false,
+		},
+		{
+			name: "server returns method not allowed",
+			setupServer: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				}))
+			},
+			timeout:        2 * time.Second,
+			expectedResult: true, // MethodNotAllowed still means server is ready
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var server *httptest.Server
+			var url string
+			
+			if tt.setupServer != nil {
+				server = tt.setupServer()
+				if server != nil {
+					url = server.URL
+					defer server.Close()
+				} else {
+					url = "http://localhost:99999" // Non-existent port
+				}
+			} else {
+				url = "http://localhost:99999" // Non-existent port
+			}
+
+			result := waitForServerReady(url, tt.timeout)
+			if result != tt.expectedResult {
+				t.Errorf("waitForServerReady() = %v, want %v", result, tt.expectedResult)
+			}
+		})
+	}
 }
 
 // Note: Testing main() function is complex because it:

@@ -122,3 +122,16 @@ All planned features have been implemented:
 - ✅ Comprehensive unit tests added
 - ✅ Copy to clipboard functionality added
 - ✅ Text standardization updated to remove line breaks
+
+## Future Enhancements
+
+### Quit Button
+- Add a "Quit" button at the bottom of the web page
+- When clicked, the button should send a request to the server to initiate graceful shutdown
+- The Go process should terminate properly upon receiving the quit request
+- Implementation considerations:
+  - Add a new API endpoint (e.g., `POST /api/quit`) to handle quit requests
+  - Use a channel or context to signal shutdown to the main server loop
+  - Ensure graceful shutdown of the HTTP server before process termination
+  - Update `index.html` to include the quit button with appropriate styling
+  - Add JavaScript handler to send quit request and provide user feedback

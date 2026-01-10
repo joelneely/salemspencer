@@ -34,16 +34,26 @@ func main() {
 		Handler: mux,
 	}
 
+	// Channel to signal when server is ready
+	serverReady := make(chan bool, 1)
+
 	// Start server in a goroutine
 	go func() {
 		log.Printf("Starting server on %s", url)
+		serverReady <- true // Signal that we're attempting to start
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
 
-	// Wait a moment for server to start
-	time.Sleep(500 * time.Millisecond)
+	// Wait for server to be ready
+	<-serverReady
+	
+	// Verify server is actually accepting connections before opening browser
+	if !waitForServerReady(url, 5*time.Second) {
+		log.Printf("Warning: Server may not be ready, but opening browser anyway")
+		log.Printf("If the page doesn't load, please wait a moment and refresh")
+	}
 
 	// Open browser
 	if err := openBrowser(url); err != nil {
@@ -68,6 +78,28 @@ func main() {
 	} else {
 		log.Println("Server stopped gracefully")
 	}
+}
+
+// waitForServerReady polls the server to verify it's accepting connections
+func waitForServerReady(url string, timeout time.Duration) bool {
+	client := &http.Client{
+		Timeout: 1 * time.Second,
+	}
+	
+	deadline := time.Now().Add(timeout)
+	
+	for time.Now().Before(deadline) {
+		resp, err := client.Get(url)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusMethodNotAllowed {
+				return true
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	
+	return false
 }
 
 // openBrowser opens the default browser to the specified URL

@@ -63,6 +63,26 @@ func TestStandardizeInput(t *testing.T) {
 			input:    "   \n\t  \n  ",
 			expected: "",
 		},
+		{
+			name:     "text with Unicode line separator (U+2028)",
+			input:    "hello\u2028world",
+			expected: "hello world",
+		},
+		{
+			name:     "text with Unicode paragraph separator (U+2029)",
+			input:    "hello\u2029world",
+			expected: "hello world",
+		},
+		{
+			name:     "text with both Unicode separators",
+			input:    "hello\u2028\u2029world",
+			expected: "hello world",
+		},
+		{
+			name:     "text with mixed newlines and Unicode separators",
+			input:    "hello\n\u2028world\u2029test",
+			expected: "hello world test",
+		},
 	}
 
 	for _, tt := range tests {

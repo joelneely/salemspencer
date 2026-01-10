@@ -9,6 +9,38 @@ import (
 	"path/filepath"
 )
 
+// getStaticDir returns the path to the static directory.
+// It checks multiple locations in order: current working directory, executable directory, and parent of executable.
+func getStaticDir() string {
+	// First, try current working directory (most common for development)
+	cwd, err := os.Getwd()
+	if err == nil {
+		staticPath := filepath.Join(cwd, "static")
+		if _, err := os.Stat(staticPath); err == nil {
+			return staticPath
+		}
+	}
+	
+	// Try to get the executable path
+	execPath, err := os.Executable()
+	if err == nil {
+		execDir := filepath.Dir(execPath)
+		staticPath := filepath.Join(execDir, "static")
+		if _, err := os.Stat(staticPath); err == nil {
+			return staticPath
+		}
+		// If executable is in a bin/ directory, try parent directory
+		parentDir := filepath.Dir(execDir)
+		staticPath = filepath.Join(parentDir, "static")
+		if _, err := os.Stat(staticPath); err == nil {
+			return staticPath
+		}
+	}
+	
+	// Fall back to relative path (for development with go run)
+	return "static"
+}
+
 // handleIndex serves the main HTML page
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -16,7 +48,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	htmlPath := filepath.Join("static", "index.html")
+	htmlPath := filepath.Join(getStaticDir(), "index.html")
 	htmlContent, err := os.ReadFile(htmlPath)
 	if err != nil {
 		log.Printf("Error reading index.html: %v", err)
@@ -86,7 +118,7 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join("static", filename)
+	filePath := filepath.Join(getStaticDir(), filename)
 
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {

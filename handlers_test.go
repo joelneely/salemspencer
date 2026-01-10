@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -228,6 +229,18 @@ func TestHandleProcessIntegration(t *testing.T) {
 			expectedStandard: "hello world",
 			expectedResult:   "HELLO WORLD",
 		},
+		{
+			name:             "text with Unicode line separator",
+			input:            "hello\u2028world",
+			expectedStandard: "hello world",
+			expectedResult:   "HELLO WORLD",
+		},
+		{
+			name:             "text with Unicode paragraph separator",
+			input:            "hello\u2029world",
+			expectedStandard: "hello world",
+			expectedResult:   "HELLO WORLD",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -260,5 +273,38 @@ func TestHandleProcessIntegration(t *testing.T) {
 				t.Errorf("Result = %q, want %q", response.Result, tc.expectedResult)
 			}
 		})
+	}
+}
+
+// TestGetStaticDir tests the getStaticDir function
+func TestGetStaticDir(t *testing.T) {
+	staticDir := getStaticDir()
+	
+	// Verify that the returned path exists and is a directory
+	if staticDir == "" {
+		t.Error("getStaticDir() returned empty string")
+	}
+	
+	// Check if the static directory exists at the returned path
+	info, err := os.Stat(staticDir)
+	if err != nil {
+		t.Errorf("getStaticDir() returned path %q that does not exist: %v", staticDir, err)
+		return
+	}
+	
+	if !info.IsDir() {
+		t.Errorf("getStaticDir() returned path %q that is not a directory", staticDir)
+	}
+	
+	// Verify that index.html exists in the static directory
+	indexPath := filepath.Join(staticDir, "index.html")
+	if _, err := os.Stat(indexPath); err != nil {
+		t.Errorf("getStaticDir() returned path %q but index.html not found: %v", staticDir, err)
+	}
+	
+	// Verify that style.css exists in the static directory
+	cssPath := filepath.Join(staticDir, "style.css")
+	if _, err := os.Stat(cssPath); err != nil {
+		t.Errorf("getStaticDir() returned path %q but style.css not found: %v", staticDir, err)
 	}
 }
