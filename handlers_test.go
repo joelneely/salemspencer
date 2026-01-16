@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -306,5 +307,122 @@ func TestGetStaticDir(t *testing.T) {
 	cssPath := filepath.Join(staticDir, "style.css")
 	if _, err := os.Stat(cssPath); err != nil {
 		t.Errorf("getStaticDir() returned path %q but style.css not found: %v", staticDir, err)
+	}
+}
+
+// TestCopyButtonHTMLStructure tests that the copy button and related HTML elements exist in the index page
+func TestCopyButtonHTMLStructure(t *testing.T) {
+	// Ensure static directory exists
+	if _, err := os.Stat("static"); os.IsNotExist(err) {
+		t.Skip("static directory does not exist, skipping test")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	handleIndex(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("handleIndex() status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	htmlContent := w.Body.String()
+
+	// Verify copy button exists
+	if !strings.Contains(htmlContent, `id="copy-btn"`) {
+		t.Error("Copy button with id 'copy-btn' not found in HTML")
+	}
+
+	// Verify copy button has correct type
+	if !strings.Contains(htmlContent, `<button id="copy-btn" type="button"`) {
+		t.Error("Copy button should have type='button'")
+	}
+
+	// Verify copy button has aria-label for accessibility
+	if !strings.Contains(htmlContent, `aria-label="Copy result to clipboard"`) {
+		t.Error("Copy button should have aria-label attribute for accessibility")
+	}
+
+	// Verify copy feedback element exists
+	if !strings.Contains(htmlContent, `id="copy-feedback"`) {
+		t.Error("Copy feedback element with id 'copy-feedback' not found in HTML")
+	}
+
+	// Verify copy feedback has accessibility attributes
+	if !strings.Contains(htmlContent, `role="status"`) {
+		t.Error("Copy feedback should have role='status' for accessibility")
+	}
+	if !strings.Contains(htmlContent, `aria-live="polite"`) {
+		t.Error("Copy feedback should have aria-live='polite' for accessibility")
+	}
+	if !strings.Contains(htmlContent, `aria-atomic="true"`) {
+		t.Error("Copy feedback should have aria-atomic='true' for accessibility")
+	}
+
+	// Verify result textarea exists (required for copy functionality)
+	if !strings.Contains(htmlContent, `id="result-text"`) {
+		t.Error("Result textarea with id 'result-text' not found in HTML")
+	}
+}
+
+// TestCopyButtonJavaScript tests that the copy functionality JavaScript is present
+func TestCopyButtonJavaScript(t *testing.T) {
+	// Ensure static directory exists
+	if _, err := os.Stat("static"); os.IsNotExist(err) {
+		t.Skip("static directory does not exist, skipping test")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	handleIndex(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("handleIndex() status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	htmlContent := w.Body.String()
+
+	// Verify copy button event listener is present
+	if !strings.Contains(htmlContent, `copyBtn.addEventListener('click'`) && !strings.Contains(htmlContent, `copyBtn.addEventListener("click"`) {
+		t.Error("Copy button click event listener not found in JavaScript")
+	}
+
+	// Verify clipboard API check function exists
+	if !strings.Contains(htmlContent, `isClipboardAPIAvailable`) {
+		t.Error("Clipboard API availability check function not found")
+	}
+
+	// Verify execCommand fallback function exists
+	if !strings.Contains(htmlContent, `copyWithExecCommand`) {
+		t.Error("execCommand fallback copy function not found")
+	}
+
+	// Verify main copy function exists
+	if !strings.Contains(htmlContent, `copyToClipboard`) {
+		t.Error("Main copyToClipboard function not found")
+	}
+
+	// Verify error handling exists
+	if !strings.Contains(htmlContent, `catch`) {
+		t.Error("Error handling (catch block) not found in copy functionality")
+	}
+
+	// Verify feedback function exists
+	if !strings.Contains(htmlContent, `showCopyFeedback`) {
+		t.Error("showCopyFeedback function not found")
+	}
+
+	// Verify keyboard support exists
+	if !strings.Contains(htmlContent, `addEventListener('keydown'`) && !strings.Contains(htmlContent, `addEventListener("keydown"`) {
+		// Check if it's on the copy button specifically
+		if !strings.Contains(htmlContent, `copyBtn.addEventListener`) {
+			t.Error("Keyboard event listener for copy button not found")
+		}
+	}
+
+	// Verify browser compatibility check exists
+	if !strings.Contains(htmlContent, `isExecCommandAvailable`) {
+		t.Error("execCommand availability check function not found")
 	}
 }
