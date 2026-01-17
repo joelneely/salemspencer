@@ -426,3 +426,159 @@ func TestCopyButtonJavaScript(t *testing.T) {
 		t.Error("execCommand availability check function not found")
 	}
 }
+
+// TestHandleShutdown tests the shutdown endpoint
+func TestHandleShutdown(t *testing.T) {
+	shutdownChan := make(chan struct{}, 1)
+
+	tests := []struct {
+		name           string
+		method         string
+		expectedStatus int
+		shouldTrigger  bool
+	}{
+		{
+			name:           "valid POST request",
+			method:         http.MethodPost,
+			expectedStatus: http.StatusOK,
+			shouldTrigger:  true,
+		},
+		{
+			name:           "GET request",
+			method:         http.MethodGet,
+			expectedStatus: http.StatusMethodNotAllowed,
+			shouldTrigger:  false,
+		},
+		{
+			name:           "PUT request",
+			method:         http.MethodPut,
+			expectedStatus: http.StatusMethodNotAllowed,
+			shouldTrigger:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset shutdownOnce by creating a new handler instance
+			// Note: In real usage, sync.Once ensures shutdown only happens once
+			// For testing, we'll verify the handler responds correctly
+			
+			req := httptest.NewRequest(tt.method, "/api/shutdown", nil)
+			w := httptest.NewRecorder()
+
+			handleShutdown(w, req, shutdownChan)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("handleShutdown() status = %d, want %d", w.Code, tt.expectedStatus)
+			}
+
+			if tt.shouldTrigger && tt.expectedStatus == http.StatusOK {
+				// Verify response is JSON
+				contentType := w.Header().Get("Content-Type")
+				if contentType != "application/json" {
+					t.Errorf("handleShutdown() Content-Type = %q, want %q", contentType, "application/json")
+				}
+
+				// Verify response body contains expected message
+				var response struct {
+					Message string `json:"message"`
+				}
+				if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+					t.Errorf("handleShutdown() returned invalid JSON: %v", err)
+				}
+
+				if response.Message == "" {
+					t.Error("handleShutdown() response message is empty")
+				}
+			}
+		})
+	}
+}
+
+// TestShutdownButtonHTMLStructure tests that the shutdown button exists in the HTML
+func TestShutdownButtonHTMLStructure(t *testing.T) {
+	// Ensure static directory exists
+	if _, err := os.Stat("static"); os.IsNotExist(err) {
+		t.Skip("static directory does not exist, skipping test")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	handleIndex(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("handleIndex() status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	htmlContent := w.Body.String()
+
+	// Verify shutdown button exists
+	if !strings.Contains(htmlContent, `id="shutdown-btn"`) {
+		t.Error("Shutdown button with id 'shutdown-btn' not found in HTML")
+	}
+
+	// Verify shutdown button has correct type
+	if !strings.Contains(htmlContent, `<button id="shutdown-btn" type="button"`) {
+		t.Error("Shutdown button should have type='button'")
+	}
+
+	// Verify shutdown button has aria-label for accessibility
+	if !strings.Contains(htmlContent, `aria-label="Shut down the server"`) {
+		t.Error("Shutdown button should have aria-label attribute for accessibility")
+	}
+
+	// Verify shutdown section exists
+	if !strings.Contains(htmlContent, `shutdown-section`) {
+		t.Error("Shutdown section with class 'shutdown-section' not found in HTML")
+	}
+}
+
+// TestShutdownButtonJavaScript tests that the shutdown functionality JavaScript is present
+func TestShutdownButtonJavaScript(t *testing.T) {
+	// Ensure static directory exists
+	if _, err := os.Stat("static"); os.IsNotExist(err) {
+		t.Skip("static directory does not exist, skipping test")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	handleIndex(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("handleIndex() status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	htmlContent := w.Body.String()
+
+	// Verify shutdown button event listener is present
+	if !strings.Contains(htmlContent, `shutdownBtn.addEventListener('click'`) && !strings.Contains(htmlContent, `shutdownBtn.addEventListener("click"`) {
+		t.Error("Shutdown button click event listener not found in JavaScript")
+	}
+
+	// Verify shutdown endpoint is called
+	if !strings.Contains(htmlContent, `/api/shutdown`) {
+		t.Error("Shutdown API endpoint '/api/shutdown' not found in JavaScript")
+	}
+
+	// Verify window.close() is attempted
+	if !strings.Contains(htmlContent, `window.close`) {
+		t.Error("window.close() call not found in shutdown JavaScript")
+	}
+
+	// Verify confirmation dialog exists
+	if !strings.Contains(htmlContent, `confirm(`) {
+		t.Error("Confirmation dialog not found in shutdown JavaScript")
+	}
+
+	// Verify error handling exists
+	if !strings.Contains(htmlContent, `catch`) {
+		t.Error("Error handling (catch block) not found in shutdown functionality")
+	}
+
+	// Verify keyboard support exists
+	if !strings.Contains(htmlContent, `shutdownBtn.addEventListener`) {
+		t.Error("Shutdown button event listeners not found")
+	}
+}

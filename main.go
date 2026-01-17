@@ -23,10 +23,16 @@ func main() {
 	addr := fmt.Sprintf(":%s", port)
 	url := fmt.Sprintf("http://localhost:%s", port)
 
+	// Channel for HTTP-triggered shutdown
+	shutdownChan := make(chan struct{}, 1)
+
 	// Create HTTP server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
 	mux.HandleFunc("/api/process", handleProcess)
+	mux.HandleFunc("/api/shutdown", func(w http.ResponseWriter, r *http.Request) {
+		handleShutdown(w, r, shutdownChan)
+	})
 	mux.HandleFunc("/static/", handleStatic)
 
 	server := &http.Server{
@@ -61,12 +67,19 @@ func main() {
 		log.Printf("Please open %s manually in your browser", url)
 	}
 
-	// Wait for interrupt signal
+	// Wait for interrupt signal or HTTP-triggered shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	log.Println("Server is running. Press Ctrl+C to stop.")
-	<-sigChan
+	
+	// Wait for either signal-based shutdown or HTTP-triggered shutdown
+	select {
+	case <-sigChan:
+		log.Println("Received shutdown signal (Ctrl+C)")
+	case <-shutdownChan:
+		log.Println("Received shutdown request from web interface")
+	}
 
 	// Graceful shutdown
 	log.Println("Shutting down server...")

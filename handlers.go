@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // getStaticDir returns the path to the static directory.
@@ -133,4 +134,37 @@ func handleStatic(w http.ResponseWriter, r *http.Request) {
 
 	// Serve file
 	http.ServeFile(w, r, filePath)
+}
+
+// shutdownOnce ensures shutdown is only triggered once
+var shutdownOnce sync.Once
+
+// handleShutdown handles the POST /api/shutdown endpoint
+func handleShutdown(w http.ResponseWriter, r *http.Request, shutdownChan chan<- struct{}) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Use sync.Once to ensure shutdown is only triggered once
+	shutdownOnce.Do(func() {
+		log.Println("Shutdown requested via web interface")
+		// Send shutdown signal
+		select {
+		case shutdownChan <- struct{}{}:
+		default:
+			// Channel already has a signal, ignore
+		}
+	})
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Message string `json:"message"`
+	}{
+		Message: "Server shutdown initiated",
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding shutdown response: %v", err)
+	}
 }

@@ -16,6 +16,7 @@ The Web Helper Framework is a Go-based web application that provides a simple in
    - Text processing (uppercase conversion)
    - Copy to clipboard functionality
    - Robust static file path resolution (works regardless of execution context)
+   - Shut down button to gracefully stop the server and close the browser tab
 
 2. **Code Quality**
    - Comprehensive unit tests (35+ test cases)
@@ -222,6 +223,15 @@ webhelper/
    - Prevents "localhost can't be reached" errors
    - May fail on systems without browser commands
    - Fallback: logs warning and provides manual URL if browser opening fails
+
+### Planned Features
+
+1. **Shut Down Button**
+   - Add a "Shut down" button on the web page
+   - When pressed, sends a request to the server to initiate graceful shutdown
+   - Server stops gracefully and the browser tab closes
+   - Implementation will use a shutdown channel to signal the main server loop
+   - Browser tab closing may be limited by browser security policies (tabs not opened by JavaScript cannot be closed programmatically)
 
 ### Future Enhancement Ideas
 
