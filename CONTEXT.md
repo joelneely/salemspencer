@@ -19,7 +19,7 @@ The Web Helper Framework is a Go-based web application that provides a simple in
    - Shut down button to gracefully stop the server and close the browser tab
 
 2. **Code Quality**
-   - Comprehensive unit tests (35+ test cases)
+   - Comprehensive unit tests (40+ test cases)
    - All tests passing
    - No linter errors
    - Clean code structure
@@ -74,6 +74,25 @@ Input:  "hello world"
 Output: "HELLO WORLD"
 ```
 
+#### Shutdown Button Behavior
+
+The shutdown functionality:
+- Provides a "Shut down" button on the web interface
+- Sends POST request to `/api/shutdown` endpoint when clicked
+- Uses confirmation dialog to prevent accidental shutdown
+- Triggers graceful server shutdown (same as Ctrl+C)
+- Attempts to close browser tab using `window.close()`
+- Shows fallback message if browser security prevents tab closing
+- Uses `sync.Once` to ensure shutdown is only triggered once
+- Handles concurrent shutdown requests gracefully
+
+**Implementation Details**:
+- Backend: `handleShutdown()` function in `handlers.go` receives shutdown requests
+- Channel-based: Uses `shutdownChan` in `main.go` to signal shutdown to main loop
+- Main loop: Uses `select` statement to handle both signal-based (Ctrl+C) and HTTP-triggered shutdown
+- Frontend: JavaScript handler sends POST request and attempts tab closing
+- Styling: Red/destructive color scheme to indicate shutdown action
+
 ### File Structure
 
 ```
@@ -86,8 +105,10 @@ webhelper/
 ├── go.mod                  # Go module definition
 ├── main.go                 # Entry point (server setup, browser opening, readiness check)
 ├── main_test.go            # Tests for main.go (browser opening, server readiness)
-├── handlers.go             # HTTP handlers (includes getStaticDir function)
-├── handlers_test.go        # Tests for handlers.go (includes getStaticDir test)
+├── handlers.go             # HTTP handlers (includes getStaticDir and handleShutdown functions)
+├── handlers_test.go        # Tests for handlers.go (includes shutdown and copy button tests)
+├── COPY_TO_CLIPBOARD_PLAN.md # Copy to clipboard implementation plan
+├── SHUTDOWN_BUTTON_PLAN.md   # Shutdown button implementation plan
 ├── processor.go            # Text processing (Unicode separator support)
 ├── processor_test.go       # Tests for processor.go (Unicode separator tests)
 └── static/
@@ -129,6 +150,14 @@ webhelper/
 - `TestGetStaticDir`: Static directory path resolution
   - Verifies static directory can be found
   - Checks for required files (index.html, style.css)
+- `TestCopyButtonHTMLStructure`: Verifies copy button HTML structure and accessibility
+- `TestCopyButtonJavaScript`: Verifies copy functionality JavaScript presence
+- `TestHandleShutdown`: Shutdown endpoint tests
+  - Valid POST requests
+  - Method not allowed (GET, PUT, etc.)
+  - JSON response validation
+- `TestShutdownButtonHTMLStructure`: Verifies shutdown button HTML structure and accessibility
+- `TestShutdownButtonJavaScript`: Verifies shutdown functionality JavaScript presence
 
 **main_test.go:**
 - `TestOpenBrowser`: Browser opening function tests
@@ -161,6 +190,23 @@ webhelper/
    - Polls server with HTTP requests before opening browser
    - Added test coverage for readiness scenarios
 
+5. **Copy to Clipboard Enhancement**
+   - Added fallback clipboard implementation using `document.execCommand()` for older browsers
+   - Enhanced error handling with specific error messages and UI feedback
+   - Added browser compatibility checks and graceful degradation
+   - Improved user feedback with multiple states (success, error, copying)
+   - Added accessibility features (ARIA labels, keyboard support, screen reader support)
+   - Comprehensive test coverage for HTML structure and JavaScript presence
+
+6. **Shutdown Button**
+   - Added "Shut down" button to web interface
+   - Implemented `/api/shutdown` endpoint for graceful server shutdown
+   - Channel-based shutdown mechanism that works alongside signal-based shutdown (Ctrl+C)
+   - Confirmation dialog prevents accidental shutdown
+   - Attempts browser tab closing with fallback messaging
+   - Red/destructive styling to indicate shutdown action
+   - Full test coverage including endpoint tests and HTML/JavaScript verification
+
 ### Git History
 
 1. **Initial Commit** (`b05fdc7`)
@@ -169,6 +215,17 @@ webhelper/
 
 2. **Second Commit** (`316cc6a`)
    - Add .gitignore for Go project
+
+3. **Copy to Clipboard Tests** (`0788c6d`)
+   - Add tests for copy to clipboard functionality
+   - Verify HTML structure and JavaScript presence
+   - Verify accessibility attributes
+
+4. **Shutdown Button Implementation** (latest)
+   - Add shutdown button to web interface
+   - Implement `/api/shutdown` endpoint
+   - Add channel-based shutdown mechanism
+   - Add comprehensive tests for shutdown functionality
 
 ### Key Design Decisions
 
@@ -224,14 +281,35 @@ webhelper/
    - May fail on systems without browser commands
    - Fallback: logs warning and provides manual URL if browser opening fails
 
-### Planned Features
+5. **Shutdown Button**
+   - Browser tab closing may be blocked by browser security policies
+   - Tabs not opened by JavaScript cannot be closed programmatically
+   - Fallback: Shows message to user if tab cannot be closed automatically
+   - Shutdown endpoint is accessible without authentication (local use only)
 
-1. **Shut Down Button**
-   - Add a "Shut down" button on the web page
-   - When pressed, sends a request to the server to initiate graceful shutdown
-   - Server stops gracefully and the browser tab closes
-   - Implementation will use a shutdown channel to signal the main server loop
-   - Browser tab closing may be limited by browser security policies (tabs not opened by JavaScript cannot be closed programmatically)
+### API Endpoints
+
+The application provides the following HTTP endpoints:
+
+1. **GET `/`**
+   - Serves the main HTML page (`index.html`)
+   - Returns HTML content with proper content-type headers
+
+2. **POST `/api/process`**
+   - Accepts JSON request body: `{"input": "user text"}`
+   - Returns JSON response: `{"standardized": "...", "result": "..."}`
+   - Processes input through standardization and processing functions
+
+3. **POST `/api/shutdown`**
+   - Initiates graceful server shutdown
+   - Returns JSON response: `{"message": "Server shutdown initiated"}`
+   - Uses `sync.Once` to ensure shutdown is only triggered once
+   - Other HTTP methods return 405 Method Not Allowed
+
+4. **GET `/static/*`**
+   - Serves static files (CSS, etc.)
+   - Validates file existence before serving
+   - Sets appropriate content-type headers
 
 ### Future Enhancement Ideas
 
