@@ -37,10 +37,7 @@ func NewSSSet(size int) SSSet {
 	return MakeSSSet(empty, size)
 }
 
-// TODO: examine the effect of modifying the methods to take a pointer
-// in other words, will that eliminate copying and speed up the code?
-
-func (this SSSet) Equals(that SSSet) bool {
+func (this *SSSet) Equals(that SSSet) bool {
 	if this.Size != that.Size {
 		return false;
 	}
@@ -55,11 +52,11 @@ func (this SSSet) Equals(that SSSet) bool {
 	return true;
 }
 
-func (this SSSet) IsClosedAt(move int) bool {
+func (this *SSSet) IsClosedAt(move int) bool {
 	return this.Data[move] == CLOSED
 }
 
-func (this SSSet) IsOpenAt(move int) bool {
+func (this *SSSet) IsOpenAt(move int) bool {
 	return this.Data[move] == OPEN
 }
 
@@ -73,9 +70,9 @@ func checkBlock(dd *[MAXLENGTH]uint8, i, j int) {
 // current move position, checking for CLOSED positions that
 // cause other positions to become BLOCKED.
 
-func (this SSSet) Move(move int) (SSSet, bool) {
+func (this *SSSet) Move(move int) (SSSet, bool) {
 	if !this.IsOpenAt(move) {
-		return this, false
+		return *this, false
 	}
 	dd := this.Data
 	//
@@ -109,9 +106,9 @@ func (this SSSet) Move(move int) (SSSet, bool) {
 // of the current move position.
 //
 
-func (this SSSet) MoveLR(move int) (SSSet, bool) {
+func (this *SSSet) MoveLR(move int) (SSSet, bool) {
 	if !this.IsOpenAt(move) {
-		return this, false
+		return *this, false
 	}
 	dd := this.Data
 	for i, j := move - 1, move + 1; 1 <= i && j <= this.Size; i, j = i - 1, j + 1 {
