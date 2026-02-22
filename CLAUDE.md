@@ -43,11 +43,26 @@ Two move methods exist:
 - `Move(i)` — general-case; checks both directions from position `i` for arithmetic progression conflicts.
 - `MoveLR(i)` — optimized for left-to-right traversal only; skips checking positions to the right of `i` (they haven't been visited yet), giving a significant performance advantage over `Move`.
 
-**`ssmain.go`** — Recursive depth-first search (`search`) over all subsets, pruning branches where the remaining positions cannot improve on `best.Weight`. Maximal sets are accumulated in `best.Sets` (a `map[SSSet]bool`), which inherently deduplicates results because `SSSet` is a comparable value type.
+**`ssmain.go`** — Contains:
+- `SearchResult` struct: `Weight` (best set size found so far) + `Sets` (`map[SSSet]bool` of all maximal sets at that size).
+- `best`: package-level `SearchResult`, reset at the start of each `findMaxSets` call.
+- `search(ss, start, prefix)`: recursive DFS. Prunes when `ss.Weight + ss.Size - start + 1 < best.Weight` (upper bound on achievable weight from this state is less than current best). Accumulates results in `best.Sets`. Note: the `prefix` parameter is unused — dead code left from earlier debugging.
+- `findMaxSets(size, began)`: resets `best`, runs `search` for a single N, prints one Markdown table row.
+- `mainSearch()`: prints the table header, then loops N=1 to `LIMIT` calling `findMaxSets`.
+- `best.Sets` deduplicates maximal sets automatically because `SSSet` is a comparable value type usable as a map key.
 
 ## Key Design Decisions
 
 - `SSSet` uses a fixed-size array `[MAXLENGTH]uint8` (not a slice) so it can be used as a map key for deduplication of maximal sets.
 - `LIMIT` in `ssdata/ssset.go` controls the maximum N searched. `MAXLENGTH = LIMIT + 1` (1-indexed arrays).
 - The search uses `MoveLR` (not `Move`) because the recursion always proceeds left-to-right. `Move` is retained for correctness testing.
+- `TestMoves` in `ssdata/ssset_test.go` verifies that `Move` produces order-independent results (applying moves in different orders yields equal sets) while `MoveLR` is intentionally order-dependent (left-to-right only). Always run `go test ./ssdata/` before and after any changes to `Move` or `MoveLR`.
 - Performance is the primary concern; the time to search grows roughly exponentially with N.
+
+## Running Long Jobs on macOS
+
+`timeout` is not available on macOS by default (produces exit code 127). Instead:
+1. Build the binary first: `go build -o salemspencer .`
+2. Run with the absolute path using `run_in_background=true` in Claude Code — output goes to the background task's capture file.
+3. Stop manually with `TaskStop` when the desired time limit is reached.
+4. The program prints each row as it completes, so partial output is usable even if the run is stopped early.
