@@ -41,7 +41,7 @@ I have already discovered a few minor optimizations for performance, but need to
 
 ### Usage
 
-Requires Go 1.18+. The search limit _N_ is set by `LIMIT` in `ssdata/ssset.go` (currently 75).
+The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The search limit _N_ is set by `LIMIT` in `ssdata/ssset.go` (currently 75).
 
 ```bash
 # Run directly
