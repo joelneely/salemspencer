@@ -24,7 +24,7 @@ _3_ | 2  | _5_ | 3 | _8_
 
 The article poses a question: can one find a larger subset within {1, 2, ... 9} that still meets the condition? As programmers and mathematicians tend to do, we can immediately generalize that question. For a given value of _N_, can we find all such subsets of maximum size? What is the maximal size for a given _N_, and how many are there?
 
-The last question is answered on [The On-Line Encyclopedia of Integer Sequences](https://oeis.org/), which is an absolute treasure for anyone who likes to play around with numbers (or who has real work to do with such information)! The counts for these maximally-sized subsets is given by (entry A262347)[https://oeis.org/A262347]. According to the history of that entry, progressively more values have been identified.
+The last question is answered on [The On-Line Encyclopedia of Integer Sequences](https://oeis.org/), which is an absolute treasure for anyone who likes to play around with numbers (or who has real work to do with such information)! The counts for these maximally-sized subsets is given by [entry A262347](https://oeis.org/A262347). According to the history of that entry, progressively more values have been identified.
 
 Contributor | Date | Maximum _N_
 :---------: | :--: | :---------:
@@ -38,6 +38,24 @@ I was able to reproduce the first few entries of the sequence fairly quickly in 
 Hence, this little project, and the choice of Go.
 
 I have already discovered a few minor optimizations for performance, but need to go further before it's practical to take on the current record of _N_ through 140.
+
+### Usage
+
+Requires Go 1.18+. The search limit _N_ is set by `LIMIT` in `ssdata/ssset.go` (currently 75).
+
+```bash
+# Run directly
+go run ssmain.go
+
+# Or build and run
+go build -o salemspencer .
+./salemspencer
+
+# Run tests
+go test ./...
+```
+
+Output is a Markdown table (like the one below) showing the maximal set size, count of distinct maximal sets, and cumulative and incremental timing for each _N_ from 1 to `LIMIT`.
 
 ### Salem-Spencer Search (revised Go implementation)
 
