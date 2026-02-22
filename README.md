@@ -137,3 +137,80 @@ N | Size | Count | Total time | Unit time
 * I had failed to move all of the constant declarations from ssmain.go to ssdata/ssset.go, so needed to fix that.
 * The first implementation of SSSet.data used slices (`[]uint8`), which prevented the use of a hashmap to store previously-found sets. I replacing that slice with an array, then replaced the slice holding maximal set with a map (eliminating the array search to prevent duplicates). These two changes reduced the processing time by about 1/3 (the previous total time for _N_=45 was 31.73s), with most of the gains coming from the first of those two changes.
 * Switched the five hot-path `SSSet` methods (`Equals`, `IsClosedAt`, `IsOpenAt`, `Move`, `MoveLR`) from value receivers to pointer receivers, eliminating 92-byte struct copies on every call. This reduced the unit time at _N_=45 from 5.909s to 3.884s — a **~34% speedup** — with no changes required at call sites.
+
+### Salem-Spencer Search (Mac Studio, M3 Ultra)
+
+Timings below are from a Mac Studio with an M3 Ultra CPU, running the same binary. The **vs M2 Pro** column shows the percentage change in unit time relative to the M2 Pro results above, for rows where unit time exceeds one second; negative values indicate the M3 Ultra was faster. Rows beyond _N_=65 have no M2 Pro baseline and are marked as new data. The run was stopped after _N_=70 to stay within an 8-hour budget; _N_=71 was estimated to push the total past that limit.
+
+N | Size | Count | Total time | Unit time | vs M2 Pro
+:-: | :-: | :-: | :-: | :-: | :-:
+1 | 1 | 1 | 4.417µs | 3.584µs | —
+2 | 2 | 1 | 43.083µs | 1.583µs | —
+3 | 2 | 3 | 52.833µs | 2.083µs | —
+4 | 3 | 2 | 67.125µs | 7.083µs | —
+5 | 4 | 1 | 79.25µs | 4.292µs | —
+6 | 4 | 4 | 95.083µs | 8.166µs | —
+7 | 4 | 10 | 133.708µs | 31.625µs | —
+8 | 4 | 25 | 168.25µs | 25.875µs | —
+9 | 5 | 4 | 204.708µs | 28.166µs | —
+10 | 5 | 24 | 255.792µs | 43µs | —
+11 | 6 | 7 | 327.125µs | 63.667µs | —
+12 | 6 | 25 | 437.167µs | 98.209µs | —
+13 | 7 | 6 | 571µs | 126µs | —
+14 | 8 | 1 | 735.333µs | 154.875µs | —
+15 | 8 | 4 | 998.375µs | 255.5µs | —
+16 | 8 | 14 | 1.409875ms | 403.875µs | —
+17 | 8 | 43 | 2.006292ms | 580.667µs | —
+18 | 8 | 97 | 3.047875ms | 1.031708ms | —
+19 | 8 | 220 | 4.576708ms | 1.481125ms | —
+20 | 9 | 2 | 6.632292ms | 2.02875ms | —
+21 | 9 | 18 | 9.721208ms | 3.053458ms | —
+22 | 9 | 62 | 13.855333ms | 4.123291ms | —
+23 | 9 | 232 | 19.75675ms | 5.8905ms | —
+24 | 10 | 2 | 26.569917ms | 6.8005ms | —
+25 | 10 | 33 | 35.338292ms | 8.745667ms | —
+26 | 11 | 2 | 44.720458ms | 9.374458ms | —
+27 | 11 | 12 | 57.782333ms | 13.041583ms | —
+28 | 11 | 36 | 75.456875ms | 17.65325ms | —
+29 | 11 | 106 | 99.849792ms | 24.360584ms | —
+30 | 12 | 1 | 127.432458ms | 27.564583ms | —
+31 | 12 | 11 | 166.655167ms | 39.190459ms | —
+32 | 13 | 2 | 212.23575ms | 45.562042ms | —
+33 | 13 | 4 | 280.543083ms | 68.286ms | —
+34 | 13 | 14 | 382.723542ms | 102.157042ms | —
+35 | 13 | 40 | 533.628417ms | 150.884125ms | —
+36 | 14 | 2 | 708.053542ms | 174.39625ms | —
+37 | 14 | 4 | 965.868667ms | 257.789709ms | —
+38 | 14 | 86 | 1.345659542s | 379.75625ms | —
+39 | 14 | 307 | 1.9027205s | 557.021417ms | —
+40 | 15 | 20 | 2.536638583s | 633.880916ms | —
+41 | 16 | 1 | 3.250884s | 714.213ms | —
+42 | 16 | 4 | 4.289926083s | 1.038989791s | −20.0%
+43 | 16 | 14 | 5.799739833s | 1.509780375s | −18.2%
+44 | 16 | 41 | 7.984676667s | 2.184851042s | −17.5%
+45 | 16 | 99 | 11.152573042s | 3.167833584s | −17.0%
+46 | 16 | 266 | 15.710454208s | 4.557836458s | −17.3%
+47 | 16 | 674 | 22.248780792s | 6.538224375s | −17.3%
+48 | 16 | 1505 | 31.607508667s | 9.358674584s | −17.1%
+49 | 16 | 3510 | 45.03835875s | 13.430775333s | −16.8%
+50 | 16 | 7726 | 1m4.058427s | 19.020016833s | −18.3%
+51 | 17 | 14 | 1m25.355536667s | 21.297026375s | −19.4%
+52 | 17 | 50 | 1m55.762309417s | 30.406687125s | −19.3%
+53 | 17 | 156 | 2m38.3433575s | 42.580950417s | −20.4%
+54 | 18 | 2 | 3m26.214796292s | 47.8713585s | −20.4%
+55 | 18 | 8 | 4m33.1229225s | 1m6.90803375s | −20.6%
+56 | 18 | 26 | 6m6.832334917s | 1m33.70932625s | −20.0%
+57 | 18 | 56 | 8m17.698151292s | 2m10.865715834s | −19.7%
+58 | 19 | 2 | 10m43.920031917s | 2m26.221799334s | −19.6%
+59 | 19 | 4 | 14m7.839548083s | 3m23.919412208s | −19.2%
+60 | 19 | 6 | 18m51.537880417s | 4m43.698209667s | −19.4%
+61 | 19 | 14 | 25m27.834010583s | 6m36.296014166s | −19.2%
+62 | 19 | 48 | 34m32.853596833s | 9m5.019469375s | −20.7%
+63 | 20 | 2 | 44m34.57872275s | 10m1.725046875s | −20.3%
+64 | 20 | 4 | 58m26.863442333s | 13m52.284623625s | −17.9%
+65 | 20 | 8 | 1h17m34.820964917s | 19m7.957420209s | −20.1%
+66 | 20 | 16 | 1h43m56.477456208s | 26m21.65638725s | new data
+67 | 20 | 28 | 2h20m2.471480833s | 36m5.993931375s | new data
+68 | 20 | 108 | 3h9m24.522234042s | 49m22.050687125s | new data
+69 | 20 | 319 | 4h17m0.817622625s | 1h7m36.295283042s | new data
+70 | 20 | 1046 | 5h55m57.087288375s | 1h38m56.269562917s | new data
