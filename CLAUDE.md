@@ -15,11 +15,17 @@ The M3 Ultra is consistently **17–21% faster** than the M2 Pro for this single
 ## Commands
 
 ```bash
-# Build and run
+# Build and run (sequential)
 go run ssmain.go
 
 # Build binary
 go build -o salemspencer .
+
+# Run sequential search (default)
+./salemspencer
+
+# Run parallel search (uses runtime.GOMAXPROCS(0) goroutines)
+./salemspencer -parallel
 
 # Run all tests
 go test ./...
@@ -51,6 +57,15 @@ Two move methods exist:
 - `mainSearch()`: prints the table header, then loops N=1 to `LIMIT` calling `findMaxSets`.
 - `best.Sets` deduplicates maximal sets automatically because `SSSet` is a comparable value type usable as a map key.
 
+**`ssparallel.go`** — Parallel alternative, selected by `-parallel` flag. Contains:
+- `parallelFlag`: `flag.Bool` registered at package init; `main()` dispatches on it.
+- `parBestWeight` (atomic `int64`): globally-known best weight, read lock-free in the hot path for pruning, written inside `parMu`.
+- `parMu` / `parSets`: mutex-protected map of maximal sets at the current best weight.
+- `searchP(ss, start)`: goroutine-safe DFS kernel mirroring `search()`. Reads `parBestWeight` atomically for pruning; acquires `parMu` only when `ss.Weight >= currentBest` to update the shared result.
+- `generateSubProblems(size)`: pre-runs two DFS levels to produce O(N²) independent `subProblem` values, providing enough granularity for good load distribution across workers.
+- `findMaxSetsParallel(size, began)`: fills a buffered channel with sub-problems, launches `runtime.GOMAXPROCS(0)` worker goroutines that drain it dynamically, waits with `sync.WaitGroup`, then prints one Markdown table row.
+- `mainSearchParallel()`: outer loop equivalent of `mainSearch()`.
+
 ## Key Design Decisions
 
 - `SSSet` uses a fixed-size array `[MAXLENGTH]uint8` (not a slice) so it can be used as a map key for deduplication of maximal sets.
@@ -58,6 +73,13 @@ Two move methods exist:
 - The search uses `MoveLR` (not `Move`) because the recursion always proceeds left-to-right. `Move` is retained for correctness testing.
 - `TestMoves` in `ssdata/ssset_test.go` verifies that `Move` produces order-independent results (applying moves in different orders yields equal sets) while `MoveLR` is intentionally order-dependent (left-to-right only). Always run `go test ./ssdata/` before and after any changes to `Move` or `MoveLR`.
 - Performance is the primary concern; the time to search grows roughly exponentially with N.
+
+### Parallel search design
+- Depth-2 pre-generation gives O(N²) sub-problems (~2800 for N=75), enough granularity for dynamic load distribution across many workers. Depth-1 (~75 items) would leave workers idle while one large sub-tree finishes.
+- `parBestWeight` is monotonically non-decreasing. Stale atomic reads therefore give a lower (more conservative) pruning threshold — never over-prunes — so lock-free reads are safe.
+- The lock (`parMu`) is only acquired when `ss.Weight >= currentBest`, which happens only at near-optimal nodes. Contention is low even with many goroutines.
+- Non-leaf nodes are briefly added to `parSets` (matching the sequential behaviour) but are always superseded: every non-leaf has a child at `Weight+1`, which resets the map. Only true DFS leaves survive in the final result.
+- Measured on M3 Ultra (28 workers): **~16–17× speedup** vs sequential at N=50 (64s → 4s wall time).
 
 ## Running Long Jobs on macOS
 

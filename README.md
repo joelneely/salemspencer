@@ -44,12 +44,13 @@ I have already discovered a few minor optimizations for performance, but need to
 The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The search limit _N_ is set by `LIMIT` in `ssdata/ssset.go` (currently 75).
 
 ```bash
-# Run directly
+# Run directly (sequential)
 go run ssmain.go
 
 # Or build and run
 go build -o salemspencer .
-./salemspencer
+./salemspencer            # sequential search (default)
+./salemspencer -parallel  # parallel search using all available CPU cores
 
 # Run tests
 go test ./...
@@ -137,6 +138,7 @@ N | Size | Count | Total time | Unit time
 * I had failed to move all of the constant declarations from ssmain.go to ssdata/ssset.go, so needed to fix that.
 * The first implementation of SSSet.data used slices (`[]uint8`), which prevented the use of a hashmap to store previously-found sets. I replacing that slice with an array, then replaced the slice holding maximal set with a map (eliminating the array search to prevent duplicates). These two changes reduced the processing time by about 1/3 (the previous total time for _N_=45 was 31.73s), with most of the gains coming from the first of those two changes.
 * Switched the five hot-path `SSSet` methods (`Equals`, `IsClosedAt`, `IsOpenAt`, `Move`, `MoveLR`) from value receivers to pointer receivers, eliminating 92-byte struct copies on every call. This reduced the unit time at _N_=45 from 5.909s to 3.884s — a **~34% speedup** — with no changes required at call sites.
+* Added a parallel DFS search (`-parallel` flag) in `ssparallel.go`. The search tree is pre-expanded two levels deep to produce O(N²) independent sub-problems, which are distributed dynamically across a pool of `runtime.GOMAXPROCS(0)` goroutines. A shared atomic best-weight allows all workers to prune aggressively as solutions are discovered. The sequential search code is unchanged. Measured on M3 Ultra (28 workers): **~16–17× speedup** vs sequential at _N_=50 (64s → 4s wall time).
 
 ### Salem-Spencer Search (Mac Studio, M3 Ultra)
 
