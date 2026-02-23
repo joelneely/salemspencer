@@ -13,6 +13,10 @@ import (
 
 var parallelFlag = flag.Bool("parallel", false, "use parallel DFS search instead of sequential")
 
+func init() {
+	flag.BoolVar(parallelFlag, "p", false, "shorthand for -parallel")
+}
+
 // subProblem is a work item: an SSSet state and the position from which
 // to continue the left-to-right DFS.
 type subProblem struct {
