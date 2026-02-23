@@ -142,12 +142,12 @@ func findMaxSetsParallel(size int, began time.Time) {
 }
 
 // mainSearchParallel is the outer loop for the parallel search mode.
-func mainSearchParallel(limit int) {
+func mainSearchParallel(from, limit int) {
 	fmt.Printf("Salem-Spencer Search (parallel Go implementation, %d workers)\n", runtime.GOMAXPROCS(0))
 	fmt.Printf("N | Size | Count | Total time | Unit time\n")
 	fmt.Printf(":-: | :-: | :-: | :-: | :-:\n")
 	began := time.Now()
-	for size := 1; size <= limit; size++ {
+	for size := from; size <= limit; size++ {
 		findMaxSetsParallel(size, began)
 	}
 }

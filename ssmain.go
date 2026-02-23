@@ -59,20 +59,22 @@ func findMaxSets(size int, began time.Time) {
 	)
 }
 
-func mainSearch(limit int) {
+func mainSearch(from, limit int) {
 	fmt.Printf("Salem-Spencer Search (revised Go implementation)\n")
 	fmt.Printf("N | Size | Count | Total time | Unit time\n")
 	fmt.Printf(":-: | :-: | :-: | :-: | :-:\n")
 	began := time.Now()
-	for size := 1; size <= limit; size++ {
+	for size := from; size <= limit; size++ {
 		findMaxSets(size, began)
 	}
 }
 
-var limitFlag = flag.Int("limit", 75, "search N from 1 up to this value (max compile-time LIMIT)")
+var limitFlag = flag.Int("limit", 75, "search N up to this value (max compile-time LIMIT)")
+var fromFlag = flag.Int("from", 1, "search N starting from this value (default 1)")
 
 func init() {
 	flag.IntVar(limitFlag, "n", 75, "shorthand for -limit")
+	flag.IntVar(fromFlag, "f", 1, "shorthand for -from")
 }
 
 func main() {
@@ -81,9 +83,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, "limit must be between 1 and %d\n", ssdata.LIMIT)
 		os.Exit(1)
 	}
+	if *fromFlag < 1 || *fromFlag > ssdata.LIMIT {
+		fmt.Fprintf(os.Stderr, "from must be between 1 and %d\n", ssdata.LIMIT)
+		os.Exit(1)
+	}
+	if *fromFlag > *limitFlag {
+		fmt.Fprintf(os.Stderr, "from (%d) must be at most limit (%d)\n", *fromFlag, *limitFlag)
+		os.Exit(1)
+	}
 	if *parallelFlag {
-		mainSearchParallel(*limitFlag)
+		mainSearchParallel(*fromFlag, *limitFlag)
 	} else {
-		mainSearch(*limitFlag)
+		mainSearch(*fromFlag, *limitFlag)
 	}
 }
