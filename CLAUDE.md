@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-A Go project to find all maximal Salem-Spencer sets (subsets of `{1..N}` containing no arithmetic progressions) for successive values of N, with the goal of beating the published record on [OEIS A262347](https://oeis.org/A262347). The current implementation handles N up to 75 (set via `LIMIT` in `ssdata/ssset.go`).
+A Go project to find all maximal Salem-Spencer sets (subsets of `{1..N}` containing no arithmetic progressions) for successive values of N, with the goal of beating the published record on [OEIS A262347](https://oeis.org/A262347). The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the runtime search limit defaults to 75 and is controlled by the `-limit`/`-n` flag.
 
 README.md contains two timing tables:
 - **MacBook Pro (M2 Pro):** N=1–65, total run ~1h36m
@@ -21,11 +21,19 @@ go run ssmain.go
 # Build binary
 go build -o salemspencer .
 
-# Run sequential search (default)
+# Run sequential search (default: N=1..75)
 ./salemspencer
+
+# Run with a custom limit (long and short forms)
+./salemspencer -limit 50
+./salemspencer -n 50
 
 # Run parallel search (uses runtime.GOMAXPROCS(0) goroutines)
 ./salemspencer -parallel
+./salemspencer -p
+
+# Combine flags
+./salemspencer -p -n 50
 
 # Run all tests
 go test ./...
@@ -54,7 +62,8 @@ Two move methods exist:
 - `best`: package-level `SearchResult`, reset at the start of each `findMaxSets` call.
 - `search(ss, start, prefix)`: recursive DFS. Prunes when `ss.Weight + ss.Size - start + 1 < best.Weight` (upper bound on achievable weight from this state is less than current best). Accumulates results in `best.Sets`. Note: the `prefix` parameter is unused — dead code left from earlier debugging.
 - `findMaxSets(size, began)`: resets `best`, runs `search` for a single N, prints one Markdown table row.
-- `mainSearch()`: prints the table header, then loops N=1 to `LIMIT` calling `findMaxSets`.
+- `limitFlag`: `flag.Int` for `-limit` (default 75); `-n` is a shorthand alias. Validated in `main()` to be in `[1, LIMIT]`.
+- `mainSearch(limit int)`: prints the table header, then loops N=1 to `limit` calling `findMaxSets`.
 - `best.Sets` deduplicates maximal sets automatically because `SSSet` is a comparable value type usable as a map key.
 
 **`ssparallel.go`** — Parallel alternative, selected by `-parallel` flag. Contains:
@@ -64,12 +73,12 @@ Two move methods exist:
 - `searchP(ss, start)`: goroutine-safe DFS kernel mirroring `search()`. Reads `parBestWeight` atomically for pruning; acquires `parMu` only when `ss.Weight >= currentBest` to update the shared result.
 - `generateSubProblems(size)`: pre-runs two DFS levels to produce O(N²) independent `subProblem` values, providing enough granularity for good load distribution across workers.
 - `findMaxSetsParallel(size, began)`: fills a buffered channel with sub-problems, launches `runtime.GOMAXPROCS(0)` worker goroutines that drain it dynamically, waits with `sync.WaitGroup`, then prints one Markdown table row.
-- `mainSearchParallel()`: outer loop equivalent of `mainSearch()`.
+- `mainSearchParallel(limit int)`: outer loop equivalent of `mainSearch(limit)`.
 
 ## Key Design Decisions
 
 - `SSSet` uses a fixed-size array `[MAXLENGTH]uint8` (not a slice) so it can be used as a map key for deduplication of maximal sets.
-- `LIMIT` in `ssdata/ssset.go` controls the maximum N searched. `MAXLENGTH = LIMIT + 1` (1-indexed arrays).
+- `LIMIT=150` in `ssdata/ssset.go` is the compile-time ceiling; `MAXLENGTH = LIMIT + 1 = 151` (1-indexed arrays). The runtime search limit is set by `-limit`/`-n` (default 75, must be ≤ `LIMIT`).
 - The search uses `MoveLR` (not `Move`) because the recursion always proceeds left-to-right. `Move` is retained for correctness testing.
 - `TestMoves` in `ssdata/ssset_test.go` verifies that `Move` produces order-independent results (applying moves in different orders yields equal sets) while `MoveLR` is intentionally order-dependent (left-to-right only). Always run `go test ./ssdata/` before and after any changes to `Move` or `MoveLR`.
 - Performance is the primary concern; the time to search grows roughly exponentially with N.
