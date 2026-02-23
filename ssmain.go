@@ -4,6 +4,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"time"
 	"gospikes/salemspencer/ssdata"
@@ -72,5 +73,10 @@ func mainSearch() {
 }
 
 func main() {
-	mainSearch()
+	flag.Parse()
+	if *parallelFlag {
+		mainSearchParallel()
+	} else {
+		mainSearch()
+	}
 }
