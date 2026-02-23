@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 	"gospikes/salemspencer/ssdata"
 )
@@ -58,25 +59,31 @@ func findMaxSets(size int, began time.Time) {
 	)
 }
 
-func mainSearch() {
+func mainSearch(limit int) {
 	fmt.Printf("Salem-Spencer Search (revised Go implementation)\n")
 	fmt.Printf("N | Size | Count | Total time | Unit time\n")
 	fmt.Printf(":-: | :-: | :-: | :-: | :-:\n")
 	began := time.Now()
-	for size := 1; size <=ssdata.LIMIT; size++ {
+	for size := 1; size <= limit; size++ {
 		findMaxSets(size, began)
 	}
-	// fmt.Printf("\nMaximal sets for %d\n", LIMIT)
-	// for _, example := range best.Sets {
-	// 	fmt.Printf("\t%v\n", example)
-	// }
+}
+
+var limitFlag = flag.Int("limit", 75, "search N from 1 up to this value (max compile-time LIMIT)")
+
+func init() {
+	flag.IntVar(limitFlag, "n", 75, "shorthand for -limit")
 }
 
 func main() {
 	flag.Parse()
+	if *limitFlag < 1 || *limitFlag > ssdata.LIMIT {
+		fmt.Fprintf(os.Stderr, "limit must be between 1 and %d\n", ssdata.LIMIT)
+		os.Exit(1)
+	}
 	if *parallelFlag {
-		mainSearchParallel()
+		mainSearchParallel(*limitFlag)
 	} else {
-		mainSearch()
+		mainSearch(*limitFlag)
 	}
 }
