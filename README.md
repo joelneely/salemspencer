@@ -41,7 +41,7 @@ I have already discovered a few minor optimizations for performance, but need to
 
 ### Usage
 
-The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the runtime search limit defaults to 75 and is controlled by the `-limit`/`-n` flag.
+The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the starting point and search limit default to 1 and 75 respectively, and are controlled by the `-from`/`-f` and `-limit`/`-n` flags.
 
 ```bash
 # Run directly (sequential)
@@ -52,9 +52,11 @@ go build -o salemspencer .
 ./salemspencer              # sequential search, N=1..75 (default)
 ./salemspencer -limit 50    # stop at N=50
 ./salemspencer -n 50        # same, short form
+./salemspencer -from 60     # start at N=60 (skip already-known values)
+./salemspencer -f 60        # same, short form
 ./salemspencer -parallel    # parallel search using all available CPU cores
 ./salemspencer -p           # same, short form
-./salemspencer -p -n 50     # parallel, stop at N=50
+./salemspencer -p -f 60 -n 75  # parallel, N=60..75
 
 # Run tests
 go test ./...

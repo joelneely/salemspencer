@@ -28,12 +28,16 @@ go build -o salemspencer .
 ./salemspencer -limit 50
 ./salemspencer -n 50
 
+# Start from a value other than 1 (long and short forms)
+./salemspencer -from 60
+./salemspencer -f 60
+
 # Run parallel search (uses runtime.GOMAXPROCS(0) goroutines)
 ./salemspencer -parallel
 ./salemspencer -p
 
 # Combine flags
-./salemspencer -p -n 50
+./salemspencer -p -f 60 -n 75
 
 # Run all tests
 go test ./...
@@ -63,7 +67,8 @@ Two move methods exist:
 - `search(ss, start, prefix)`: recursive DFS. Prunes when `ss.Weight + ss.Size - start + 1 < best.Weight` (upper bound on achievable weight from this state is less than current best). Accumulates results in `best.Sets`. Note: the `prefix` parameter is unused — dead code left from earlier debugging.
 - `findMaxSets(size, began)`: resets `best`, runs `search` for a single N, prints one Markdown table row.
 - `limitFlag`: `flag.Int` for `-limit` (default 75); `-n` is a shorthand alias. Validated in `main()` to be in `[1, LIMIT]`.
-- `mainSearch(limit int)`: prints the table header, then loops N=1 to `limit` calling `findMaxSets`.
+- `fromFlag`: `flag.Int` for `-from` (default 1); `-f` is a shorthand alias. Validated to be in `[1, LIMIT]` and ≤ `limitFlag`.
+- `mainSearch(from, limit int)`: prints the table header, then loops N=`from` to `limit` calling `findMaxSets`.
 - `best.Sets` deduplicates maximal sets automatically because `SSSet` is a comparable value type usable as a map key.
 
 **`ssparallel.go`** — Parallel alternative, selected by `-parallel` flag. Contains:
@@ -73,7 +78,7 @@ Two move methods exist:
 - `searchP(ss, start)`: goroutine-safe DFS kernel mirroring `search()`. Reads `parBestWeight` atomically for pruning; acquires `parMu` only when `ss.Weight >= currentBest` to update the shared result.
 - `generateSubProblems(size)`: pre-runs two DFS levels to produce O(N²) independent `subProblem` values, providing enough granularity for good load distribution across workers.
 - `findMaxSetsParallel(size, began)`: fills a buffered channel with sub-problems, launches `runtime.GOMAXPROCS(0)` worker goroutines that drain it dynamically, waits with `sync.WaitGroup`, then prints one Markdown table row.
-- `mainSearchParallel(limit int)`: outer loop equivalent of `mainSearch(limit)`.
+- `mainSearchParallel(from, limit int)`: outer loop equivalent of `mainSearch(from, limit)`.
 
 ## Key Design Decisions
 
