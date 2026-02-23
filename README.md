@@ -41,7 +41,7 @@ I have already discovered a few minor optimizations for performance, but need to
 
 ### Usage
 
-The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The search limit _N_ is set by `LIMIT` in `ssdata/ssset.go` (currently 75).
+The original implementation was written using Go 1.14, though subsequent enhancements may depend on later language versions. The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the runtime search limit defaults to 75 and is controlled by the `-limit`/`-n` flag.
 
 ```bash
 # Run directly (sequential)
@@ -49,14 +49,18 @@ go run ssmain.go
 
 # Or build and run
 go build -o salemspencer .
-./salemspencer            # sequential search (default)
-./salemspencer -parallel  # parallel search using all available CPU cores
+./salemspencer              # sequential search, N=1..75 (default)
+./salemspencer -limit 50    # stop at N=50
+./salemspencer -n 50        # same, short form
+./salemspencer -parallel    # parallel search using all available CPU cores
+./salemspencer -p           # same, short form
+./salemspencer -p -n 50     # parallel, stop at N=50
 
 # Run tests
 go test ./...
 ```
 
-Output is a Markdown table (like the one below) showing the maximal set size, count of distinct maximal sets, and cumulative and incremental timing for each _N_ from 1 to `LIMIT`.
+Output is a Markdown table (like the one below) showing the maximal set size, count of distinct maximal sets, and cumulative and incremental timing for each _N_ from 1 to the limit.
 
 ### Salem-Spencer Search (revised Go implementation)
 
