@@ -62,7 +62,16 @@ go build -o salemspencer .
 go test ./...
 ```
 
-Output is a Markdown table (like the one below) showing the maximal set size, count of distinct maximal sets, and cumulative and incremental timing for each _N_ from 1 to the limit.
+Output is a Markdown table (like the one below) showing the maximal set size, count of distinct maximal sets, and cumulative and incremental timing for each _N_ from the starting point to the limit.
+
+To stop a run early without a time-limit tool, pipe through `head`. The output has 3 header lines plus one data row per value of _N_, so to capture through _N_=K:
+
+```bash
+./salemspencer | head -$((K+3))             # when starting from 1
+./salemspencer -f F | head -$((K-F+4))      # when starting from F
+```
+
+`SIGPIPE` terminates the program cleanly in both cases. For long background runs, prefer `-from`/`-n` to skip already-known values rather than piping through `head`.
 
 ### Salem-Spencer Search (revised Go implementation)
 
