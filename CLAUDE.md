@@ -102,3 +102,10 @@ Two move methods exist:
 2. Run with the absolute path using `run_in_background=true` in Claude Code — output goes to the background task's capture file.
 3. Stop manually with `TaskStop` when the desired time limit is reached.
 4. The program prints each row as it completes, so partial output is usable even if the run is stopped early.
+
+To stop a foreground run after a fixed number of rows, pipe through `head` (SIGPIPE terminates cleanly):
+```bash
+./salemspencer | head -$((K+3))         # capture through N=K, starting from 1
+./salemspencer -f F | head -$((K-F+4))  # capture through N=K, starting from F
+```
+Prefer `-from`/`-n` flags to skip already-known values rather than piping through `head`.
