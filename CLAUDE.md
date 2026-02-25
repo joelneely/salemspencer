@@ -66,7 +66,7 @@ Two move methods exist:
 **`ssmain.go`** — Contains:
 - `SearchResult` struct: `Weight` (best set size found so far) + `Sets` (`map[SSSet]bool` of all maximal sets at that size).
 - `best`: package-level `SearchResult`, reset at the start of each `findMaxSets` call.
-- `search(ss, start, prefix)`: recursive DFS. Prunes when `ss.Weight + ss.Size - start + 1 < best.Weight` (upper bound on achievable weight from this state is less than current best). Accumulates results in `best.Sets`. Note: the `prefix` parameter is unused — dead code left from earlier debugging.
+- `search(ss, start)`: recursive DFS. Prunes when `ss.Weight + ss.Size - start + 1 < best.Weight` (upper bound on achievable weight from this state is less than current best). Accumulates results in `best.Sets`.
 - `findMaxSets(size, began)`: resets `best`, runs `search` for a single N, prints one Markdown table row.
 - `limitFlag`: `flag.Int` for `-limit` (default 75); `-n` is a shorthand alias. Validated in `main()` to be in `[1, LIMIT]`.
 - `fromFlag`: `flag.Int` for `-from` (default 1); `-f` is a shorthand alias. Validated to be in `[1, LIMIT]` and ≤ `limitFlag`.
@@ -95,7 +95,7 @@ Two move methods exist:
 - `parBestWeight` is monotonically non-decreasing. Stale atomic reads therefore give a lower (more conservative) pruning threshold — never over-prunes — so lock-free reads are safe.
 - The lock (`parMu`) is only acquired when `ss.Weight >= currentBest`, which happens only at near-optimal nodes. Contention is low even with many goroutines.
 - Non-leaf nodes are briefly added to `parSets` (matching the sequential behaviour) but are always superseded: every non-leaf has a child at `Weight+1`, which resets the map. Only true DFS leaves survive in the final result.
-- Measured on M3 Ultra (28 workers): **~16–17× speedup** vs sequential at N=50 (64s → 4s wall time).
+- Measured on M3 Ultra (28 workers) against the pre-optimization sequential baseline: **~16–17× speedup** vs sequential at N=50 (64s sequential → 4s wall time). The sequential baseline is now 6.2s after hot-path optimization; parallel wall time has not been re-benchmarked.
 
 ## Running Long Jobs on macOS
 
