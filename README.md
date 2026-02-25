@@ -154,6 +154,7 @@ N | Size | Count | Total time | Unit time
 * The first implementation of SSSet.data used slices (`[]uint8`), which prevented the use of a hashmap to store previously-found sets. I replacing that slice with an array, then replaced the slice holding maximal set with a map (eliminating the array search to prevent duplicates). These two changes reduced the processing time by about 1/3 (the previous total time for _N_=45 was 31.73s), with most of the gains coming from the first of those two changes.
 * Switched the five hot-path `SSSet` methods (`Equals`, `IsClosedAt`, `IsOpenAt`, `Move`, `MoveLR`) from value receivers to pointer receivers, eliminating 92-byte struct copies on every call. This reduced the unit time at _N_=45 from 5.909s to 3.884s — a **~34% speedup** — with no changes required at call sites.
 * Added a parallel DFS search (`-parallel` flag) in `ssparallel.go`. The search tree is pre-expanded two levels deep to produce O(N²) independent sub-problems, which are distributed dynamically across a pool of `runtime.GOMAXPROCS(0)` goroutines. A shared atomic best-weight allows all workers to prune aggressively as solutions are discovered. The sequential search code is unchanged. Measured on M3 Ultra (28 workers): **~16–17× speedup** vs sequential at _N_=50 (64s → 4s wall time).
+* Eliminated a redundant 151-byte array copy and 151-element weight-recount scan inside `Move` and `MoveLR` by inlining `SSSet{size, weight+1, dd}` directly and removing `MakeSSSet`. Also removed a dead `prefix string` parameter from `search()` that was causing a heap string allocation on every recursive call. Combined, these changes produced a **~3× speedup** (unit time reduced by ~67%) at _N_=50–55 on M3 Ultra.
 
 ### Salem-Spencer Search (Mac Studio, M3 Ultra)
 
@@ -231,3 +232,65 @@ N | Size | Count | Total time | Unit time | vs M2 Pro
 68 | 20 | 108 | 3h9m24.522234042s | 49m22.050687125s | new data
 69 | 20 | 319 | 4h17m0.817622625s | 1h7m36.295283042s | new data
 70 | 20 | 1046 | 5h55m57.087288375s | 1h38m56.269562917s | new data
+
+### Salem-Spencer Search (Mac Studio, M3 Ultra, after hot-path optimization)
+
+Timings below are from the same Mac Studio (M3 Ultra), after eliminating the redundant array copy and weight-recount scan in `MoveLR`/`Move`, and removing the per-node string allocation in `search`. The **vs M3 Ultra (prior)** column shows the unit-time percentage change relative to the previous M3 Ultra run for rows where the new unit time exceeds one second; rows below that threshold show —. The run was stopped at _N_=55.
+
+N | Size | Count | Total time | Unit time | vs M3 Ultra (prior)
+:-: | :-: | :-: | :-: | :-: | :-:
+1 | 1 | 1 | 2.791µs | 2.583µs | —
+2 | 2 | 1 | 20.958µs | 333ns | —
+3 | 2 | 3 | 24.583µs | 458ns | —
+4 | 3 | 2 | 28.083µs | 625ns | —
+5 | 4 | 1 | 43.791µs | 12.958µs | —
+6 | 4 | 4 | 48.5µs | 1.292µs | —
+7 | 4 | 10 | 54.416µs | 3.458µs | —
+8 | 4 | 25 | 62.75µs | 5.459µs | —
+9 | 5 | 4 | 69.291µs | 3.75µs | —
+10 | 5 | 24 | 79.291µs | 7.5µs | —
+11 | 6 | 7 | 89.708µs | 7.833µs | —
+12 | 6 | 25 | 107.208µs | 15.125µs | —
+13 | 7 | 6 | 126.541µs | 16.625µs | —
+14 | 8 | 1 | 149.416µs | 20.458µs | —
+15 | 8 | 4 | 186.875µs | 34.917µs | —
+16 | 8 | 14 | 246.041µs | 56.625µs | —
+17 | 8 | 43 | 341.541µs | 92.75µs | —
+18 | 8 | 97 | 492.833µs | 148.667µs | —
+19 | 8 | 220 | 737.958µs | 240.458µs | —
+20 | 9 | 2 | 1.030791ms | 285.75µs | —
+21 | 9 | 18 | 1.462833ms | 425.125µs | —
+22 | 9 | 62 | 2.094208ms | 628.417µs | —
+23 | 9 | 232 | 3.119ms | 1.022125ms | —
+24 | 10 | 2 | 4.291333ms | 1.168417ms | —
+25 | 10 | 33 | 6.13825ms | 1.843209ms | —
+26 | 11 | 2 | 8.411ms | 2.268542ms | —
+27 | 11 | 12 | 11.695416ms | 3.278875ms | —
+28 | 11 | 36 | 16.772916ms | 5.068833ms | —
+29 | 11 | 106 | 23.9205ms | 7.138584ms | —
+30 | 12 | 1 | 32.943041ms | 9.017041ms | —
+31 | 12 | 11 | 46.253458ms | 13.302958ms | —
+32 | 13 | 2 | 62.209625ms | 15.946292ms | —
+33 | 13 | 4 | 84.981708ms | 22.763625ms | —
+34 | 13 | 14 | 117.446833ms | 32.452375ms | —
+35 | 13 | 40 | 165.233416ms | 47.754ms | —
+36 | 14 | 2 | 220.715666ms | 55.467583ms | —
+37 | 14 | 4 | 302.757541ms | 82.034583ms | —
+38 | 14 | 86 | 423.332333ms | 120.555333ms | —
+39 | 14 | 307 | 599.661791ms | 176.314541ms | —
+40 | 15 | 20 | 804.672041ms | 204.973875ms | —
+41 | 16 | 1 | 1.039253458s | 234.55625ms | —
+42 | 16 | 4 | 1.383064541s | 343.7855ms | —
+43 | 16 | 14 | 1.8823055s | 499.205042ms | —
+44 | 16 | 41 | 2.606775833s | 724.391875ms | —
+45 | 16 | 99 | 3.651588208s | 1.044761792s | −67.0%
+46 | 16 | 266 | 5.1531095s | 1.501476542s | −67.1%
+47 | 16 | 674 | 7.302284916s | 2.149106291s | −67.1%
+48 | 16 | 1505 | 10.505963166s | 3.203634583s | −65.8%
+49 | 16 | 3510 | 14.917631083s | 4.411627917s | −67.2%
+50 | 16 | 7726 | 21.114532583s | 6.196847s | −67.4%
+51 | 17 | 14 | 28.199009875s | 7.084418417s | −66.7%
+52 | 17 | 50 | 38.217932708s | 10.018867292s | −67.0%
+53 | 17 | 156 | 52.337709416s | 14.119733208s | −66.8%
+54 | 18 | 2 | 1m8.453707291s | 16.115938708s | −66.3%
+55 | 18 | 8 | 1m31.045842541s | 22.592087208s | −66.2%

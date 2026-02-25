@@ -6,11 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Go project to find all maximal Salem-Spencer sets (subsets of `{1..N}` containing no arithmetic progressions) for successive values of N, with the goal of beating the published record on [OEIS A262347](https://oeis.org/A262347). The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the runtime search limit defaults to 75 and is controlled by the `-limit`/`-n` flag.
 
-README.md contains two timing tables:
+README.md contains three timing tables:
 - **MacBook Pro (M2 Pro):** N=1–65, total run ~1h36m
 - **Mac Studio (M3 Ultra):** N=1–70, total run ~5h56m (stopped before N=71 to stay within an 8-hour budget)
+- **Mac Studio (M3 Ultra, optimized):** N=1–55, after hot-path optimization (eliminated redundant array copy/scan and per-node string allocation); unit times ~3× faster than the prior M3 Ultra run
 
-The M3 Ultra is consistently **17–21% faster** than the M2 Pro for this single-threaded search. Runtime grows roughly exponentially with N; each step is approximately 1.3–1.5× the previous.
+The M3 Ultra is consistently **17–21% faster** than the M2 Pro for this single-threaded search. Runtime grows roughly exponentially with N; each step is approximately 1.3–1.5× the previous. Selected M3 Ultra optimized unit times for reference:
+- N=50: 6.2s | N=55: 22.6s
 
 ## Commands
 
