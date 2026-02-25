@@ -21,20 +21,8 @@ type SSSet struct {
 	Data [MAXLENGTH]uint8
 }
 
-func MakeSSSet(d [MAXLENGTH]uint8, size int) SSSet {
-	dd := d
-	wt := 0
-	for _, state := range dd {
-		if state == CLOSED {
-			wt++
-		}
-	}
-	return SSSet{size, wt, dd}
-}
-
 func NewSSSet(size int) SSSet {
-	empty := [MAXLENGTH]uint8{}
-	return MakeSSSet(empty, size)
+	return SSSet{Size: size}
 }
 
 func (this *SSSet) Equals(that SSSet) bool {
@@ -97,7 +85,7 @@ func (this *SSSet) Move(move int) (SSSet, bool) {
 		checkBlock(&dd, j, i)
 	}
 	dd[move] = CLOSED
-	return MakeSSSet(dd, this.Size), true
+	return SSSet{this.Size, this.Weight + 1, dd}, true
 }
 
 //
@@ -117,7 +105,7 @@ func (this *SSSet) MoveLR(move int) (SSSet, bool) {
 		}
 	}
 	dd[move] = CLOSED
-	return MakeSSSet(dd, this.Size), true
+	return SSSet{this.Size, this.Weight + 1, dd}, true
 }
 
 func (s SSSet) String() string {

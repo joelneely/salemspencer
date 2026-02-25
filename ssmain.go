@@ -22,7 +22,7 @@ type SearchResult struct {
 
 var best SearchResult
 
-func search(ss ssdata.SSSet, start int, prefix string) {
+func search(ss ssdata.SSSet, start int) {
 
 	if ss.Weight + ss.Size - start + 1 < best.Weight {
 		return
@@ -41,7 +41,7 @@ func search(ss ssdata.SSSet, start int, prefix string) {
 	for i := start; i <= ss.Size; i++ {
 		if ss.IsOpenAt(i) {
 			next, _ := ss.MoveLR(i)
-			search(next, i + 1, prefix + "\t")
+			search(next, i + 1)
 		}
 	}
 }
@@ -50,7 +50,7 @@ func findMaxSets(size int, began time.Time) {
 	best = SearchResult{-1, make(map[ssdata.SSSet] bool)}
 	ss := ssdata.NewSSSet(size)
 	start := time.Now()
-	search(ss, 1, "\t\t\t\t\t")
+	search(ss, 1)
 	ended := time.Now()
 	fmt.Printf(
 		"%d | %d | %d | %v | %v\n",
