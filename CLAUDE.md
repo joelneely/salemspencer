@@ -95,7 +95,7 @@ Two move methods exist:
 - `parBestWeight` is monotonically non-decreasing. Stale atomic reads therefore give a lower (more conservative) pruning threshold — never over-prunes — so lock-free reads are safe.
 - The lock (`parMu`) is only acquired when `ss.Weight >= currentBest`, which happens only at near-optimal nodes. Contention is low even with many goroutines.
 - Non-leaf nodes are briefly added to `parSets` (matching the sequential behaviour) but are always superseded: every non-leaf has a child at `Weight+1`, which resets the map. Only true DFS leaves survive in the final result.
-- Measured on M3 Ultra (28 workers) against the pre-optimization sequential baseline: **~16–17× speedup** vs sequential at N=50 (64s sequential → 4s wall time). The sequential baseline is now 6.2s after hot-path optimization; parallel wall time has not been re-benchmarked.
+- Measured on M3 Ultra (28 workers): **~10.8× speedup** vs sequential at N=50 after hot-path optimization (6.2s sequential → 0.575s parallel). Pre-optimization baseline was ~16–17× (64s → ~4s); sequential improved ~10× while parallel improved ~7×, reducing parallelism efficiency from ~60% to ~39% of linear scaling across 28 workers.
 
 ## Running Long Jobs on macOS
 
