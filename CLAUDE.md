@@ -80,7 +80,7 @@ Two move methods exist:
 - `best.Sets` deduplicates maximal sets automatically because `SSSet` is a comparable value type usable as a map key.
 
 **`ssparallel.go`** — Parallel alternative, selected by `-parallel` flag. Contains:
-- `parallelFlag`: `flag.Bool` registered at package init; `main()` dispatches on it.
+- `parallelFlag`: `flag.Bool` registered at package init; `main()` dispatches on `-pipeline` first, then `-parallel`, then sequential.
 - `parBestWeight` (atomic `int64`): globally-known best weight, read lock-free in the hot path for pruning, written inside `parMu`.
 - `parMu` / `parSets`: mutex-protected map of maximal sets at the current best weight.
 - `searchP(ss, start)`: goroutine-safe DFS kernel mirroring `search()`. Reads `parBestWeight` atomically for pruning; acquires `parMu` only when `ss.Weight >= currentBest` to update the shared result.
