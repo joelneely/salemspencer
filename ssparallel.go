@@ -42,10 +42,25 @@ var (
 // when achievable < currentBest = W). This contradiction means non-leaves at
 // the final maximum cannot exist, so every entry remaining in parSets at
 // termination is a genuine DFS leaf.
-func searchP(ss ssdata.SSSet, start int) {
+func searchP(ss *ssdata.SSSet, start int) {
 	currentBest := int(atomic.LoadInt64(&parBestWeight))
-	if ss.Weight+ss.Size-start+1 < currentBest {
+	remaining := ss.Size - start + 1
+	needed := currentBest - ss.Weight
+
+	if remaining < needed {
 		return
+	}
+
+	if remaining == needed {
+		openCount := 0
+		for k := start; k <= ss.Size; k++ {
+			if ss.IsOpenAt(k) {
+				openCount++
+			}
+		}
+		if openCount < needed {
+			return
+		}
 	}
 
 	if ss.Weight >= currentBest {
@@ -55,17 +70,18 @@ func searchP(ss ssdata.SSSet, start int) {
 		case ss.Weight > currentBest:
 			atomic.StoreInt64(&parBestWeight, int64(ss.Weight))
 			parSets = make(map[ssdata.SSSet]bool)
-			parSets[ss] = true
+			parSets[*ss] = true
 		case ss.Weight == currentBest:
-			parSets[ss] = true
+			parSets[*ss] = true
 		}
 		parMu.Unlock()
 	}
 
 	for i := start; i <= ss.Size; i++ {
 		if ss.IsOpenAt(i) {
-			next, _ := ss.MoveLR(i)
-			searchP(next, i+1)
+			blocked := ss.ApplyMoveLR(i)
+			searchP(ss, i+1)
+			ss.UndoMoveLR(i, blocked)
 		}
 	}
 }
@@ -122,7 +138,7 @@ func findMaxSetsParallel(size int, began time.Time) {
 		go func() {
 			defer wg.Done()
 			for p := range work {
-				searchP(p.ss, p.start)
+				searchP(&p.ss, p.start)
 			}
 		}()
 	}

@@ -6,13 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Go project to find all maximal Salem-Spencer sets (subsets of `{1..N}` containing no arithmetic progressions) for successive values of N, with the goal of beating the published record on [OEIS A262347](https://oeis.org/A262347). The compile-time ceiling is `LIMIT=150` in `ssdata/ssset.go`; the runtime search limit defaults to 75 and is controlled by the `-limit`/`-n` flag.
 
-README.md contains three timing tables:
+README.md contains four timing tables:
 - **MacBook Pro (M2 Pro):** N=1–65, total run ~1h36m
 - **Mac Studio (M3 Ultra):** N=1–70, total run ~5h56m (stopped before N=71 to stay within an 8-hour budget)
-- **Mac Studio (M3 Ultra, optimized):** N=1–55, after hot-path optimization (eliminated redundant array copy/scan and per-node string allocation); unit times ~3× faster than the prior M3 Ultra run
+- **Mac Studio (M3 Ultra, hot-path opt.):** N=1–55, after eliminating redundant array copy/scan and per-node string allocation; unit times ~3× faster than the prior M3 Ultra run
+- **Mac Studio (M3 Ultra, pruning + in-place undo):** N=1–55, after lazy tight-bound pruning and in-place undo (eliminating the per-step 151-byte duffcopy); a further ~25–27% speedup over the hot-path baseline
 
-The M3 Ultra is consistently **17–21% faster** than the M2 Pro for this single-threaded search. Runtime grows roughly exponentially with N; each step is approximately 1.3–1.5× the previous. Selected M3 Ultra optimized unit times for reference:
-- N=50: 6.2s | N=55: 22.6s
+The M3 Ultra is consistently **17–21% faster** than the M2 Pro for this single-threaded search. Runtime grows roughly exponentially with N; each step is approximately 1.3–1.5× the previous. Current sequential baseline unit times (M3 Ultra, latest optimization):
+- N=50: 4.5s | N=55: 17.0s
 
 ## Commands
 
@@ -95,7 +96,7 @@ Two move methods exist:
 - `parBestWeight` is monotonically non-decreasing. Stale atomic reads therefore give a lower (more conservative) pruning threshold — never over-prunes — so lock-free reads are safe.
 - The lock (`parMu`) is only acquired when `ss.Weight >= currentBest`, which happens only at near-optimal nodes. Contention is low even with many goroutines.
 - Non-leaf nodes are briefly added to `parSets` (matching the sequential behaviour) but are always superseded: every non-leaf has a child at `Weight+1`, which resets the map. Only true DFS leaves survive in the final result.
-- Measured on M3 Ultra (28 workers): **~10.8× speedup** vs sequential at N=50 after hot-path optimization (6.2s sequential → 0.575s parallel). Pre-optimization baseline was ~16–17× (64s → ~4s); sequential improved ~10× while parallel improved ~7×, reducing parallelism efficiency from ~60% to ~39% of linear scaling across 28 workers.
+- Measured on M3 Ultra (28 workers): **~10.8× speedup** vs sequential at N=50 after hot-path optimization (6.2s sequential → 0.575s parallel). Pre-optimization baseline was ~16–17× (64s → ~4s); sequential improved ~10× while parallel improved ~7×, reducing parallelism efficiency from ~60% to ~39% of linear scaling across 28 workers. After the pruning + in-place undo optimization the sequential baseline at N=50 dropped to 4.5s; parallel speedup ratio not yet re-measured.
 
 ## Running Long Jobs on macOS
 

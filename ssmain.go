@@ -7,9 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/pprof"
 	"time"
+
 	"gospikes/salemspencer/ssdata"
 )
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 //
 // changing the sets to hash map to see whether performance improves
@@ -22,26 +26,41 @@ type SearchResult struct {
 
 var best SearchResult
 
-func search(ss ssdata.SSSet, start int) {
+func search(ss *ssdata.SSSet, start int) {
+	remaining := ss.Size - start + 1
+	needed := best.Weight - ss.Weight
 
-	if ss.Weight + ss.Size - start + 1 < best.Weight {
+	if remaining < needed {
 		return
 	}
 
+	if remaining == needed {
+		openCount := 0
+		for k := start; k <= ss.Size; k++ {
+			if ss.IsOpenAt(k) {
+				openCount++
+			}
+		}
+		if openCount < needed {
+			return
+		}
+	}
+
 	if ss.Weight == best.Weight {
-		best.Sets[ss] = true
+		best.Sets[*ss] = true
 	}
 
 	if ss.Weight > best.Weight {
 		best.Weight = ss.Weight
-		best.Sets = make(map[ssdata.SSSet] bool)
-		best.Sets[ss] = true
+		best.Sets = make(map[ssdata.SSSet]bool)
+		best.Sets[*ss] = true
 	}
 
 	for i := start; i <= ss.Size; i++ {
 		if ss.IsOpenAt(i) {
-			next, _ := ss.MoveLR(i)
-			search(next, i + 1)
+			blocked := ss.ApplyMoveLR(i)
+			search(ss, i+1)
+			ss.UndoMoveLR(i, blocked)
 		}
 	}
 }
@@ -50,7 +69,7 @@ func findMaxSets(size int, began time.Time) {
 	best = SearchResult{-1, make(map[ssdata.SSSet] bool)}
 	ss := ssdata.NewSSSet(size)
 	start := time.Now()
-	search(ss, 1)
+	search(&ss, 1)
 	ended := time.Now()
 	fmt.Printf(
 		"%d | %d | %d | %v | %v\n",
@@ -79,6 +98,15 @@ func init() {
 
 func main() {
 	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not create CPU profile: %v\n", err)
+			os.Exit(1)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	if *limitFlag < 1 || *limitFlag > ssdata.LIMIT {
 		fmt.Fprintf(os.Stderr, "limit must be between 1 and %d\n", ssdata.LIMIT)
 		os.Exit(1)

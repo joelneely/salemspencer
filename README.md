@@ -155,6 +155,8 @@ N | Size | Count | Total time | Unit time
 * Switched the five hot-path `SSSet` methods (`Equals`, `IsClosedAt`, `IsOpenAt`, `Move`, `MoveLR`) from value receivers to pointer receivers, eliminating 92-byte struct copies on every call. This reduced the unit time at _N_=45 from 5.909s to 3.884s — a **~34% speedup** — with no changes required at call sites.
 * Added a parallel DFS search (`-parallel` flag) in `ssparallel.go`. The search tree is pre-expanded two levels deep to produce O(N²) independent sub-problems, which are distributed dynamically across a pool of `runtime.GOMAXPROCS(0)` goroutines. A shared atomic best-weight allows all workers to prune aggressively as solutions are discovered. The sequential search code is unchanged. Measured on M3 Ultra (28 workers) against the pre-optimization sequential baseline: **~16–17× speedup** vs sequential at _N_=50 (64s → 4s wall time). After hot-path optimization, re-benchmarked at **~10.8× speedup** (6.2s sequential → 0.575s parallel); the parallel code also got faster but sequential improved proportionally more, reducing parallelism efficiency from ~60% to ~39% of linear scaling.
 * Eliminated a redundant 151-byte array copy and 151-element weight-recount scan inside `Move` and `MoveLR` by inlining `SSSet{size, weight+1, dd}` directly and removing `MakeSSSet`. Also removed a dead `prefix string` parameter from `search()` that was causing a heap string allocation on every recursive call. Combined, these changes produced a **~3× speedup** (unit time reduced by ~67%) at _N_=50–55 on M3 Ultra.
+* Added lazy tight-bound pruning: when the number of remaining positions exactly equals the weight still needed to match the current best, the code now scans those positions and prunes immediately if any are BLOCKED (making the bound unachievable). This adds an O(N) scan only in the marginal case and produced an **~18% speedup** at _N_=50–55 on M3 Ultra.
+* Added in-place undo to eliminate the 151-byte `SSSet` struct copy on every DFS step. CPU profiling showed `runtime.duffcopy` consuming 32% of CPU time. Replacing the value-copy `MoveLR` with `ApplyMoveLR` (mutates in place, returns a list of newly-blocked positions) and `UndoMoveLR` (restores them) cuts that cost entirely. Combined with the lazy pruning, unit time at _N_=50 dropped from 6.2s to 4.5s — a further **~27% speedup** over the prior optimized baseline.
 
 ### Salem-Spencer Search (Mac Studio, M3 Ultra)
 
@@ -294,3 +296,65 @@ N | Size | Count | Total time | Unit time | vs M3 Ultra (prior)
 53 | 17 | 156 | 52.337709416s | 14.119733208s | −66.8%
 54 | 18 | 2 | 1m8.453707291s | 16.115938708s | −66.3%
 55 | 18 | 8 | 1m31.045842541s | 22.592087208s | −66.2%
+
+### Salem-Spencer Search (Mac Studio, M3 Ultra, after pruning + in-place undo optimization)
+
+Timings below are from the same Mac Studio (M3 Ultra), after two further optimizations: lazy tight-bound pruning (scan OPEN positions only when remaining count exactly equals the weight still needed, pruning any subtree where BLOCKED positions make the bound unachievable) and in-place undo (mutate the single shared `SSSet` and undo changes after each recursive call, replacing the per-step 151-byte copy that `runtime.duffcopy` spent 32% of CPU time on). The `-cpuprofile` flag was added to `ssmain.go` to guide this work. The **vs M3 Ultra (hot-path opt.)** column shows the unit-time percentage change relative to the previous M3 Ultra optimized run for rows where the new unit time exceeds one second. The run was stopped at _N_=55.
+
+N | Size | Count | Total time | Unit time | vs M3 Ultra (hot-path opt.)
+:-: | :-: | :-: | :-: | :-: | :-:
+1 | 1 | 1 | 3.583µs | 3.291µs | —
+2 | 2 | 1 | 14.208µs | 541ns | —
+3 | 2 | 3 | 18.542µs | 709ns | —
+4 | 3 | 2 | 22.5µs | 792ns | —
+5 | 4 | 1 | 26.542µs | 1.042µs | —
+6 | 4 | 4 | 30.833µs | 1.375µs | —
+7 | 4 | 10 | 37.958µs | 4.166µs | —
+8 | 4 | 25 | 48.167µs | 6.792µs | —
+9 | 5 | 4 | 55.458µs | 3.916µs | —
+10 | 5 | 24 | 65.75µs | 7.417µs | —
+11 | 6 | 7 | 75.792µs | 7.042µs | —
+12 | 6 | 25 | 92.958µs | 14.416µs | —
+13 | 7 | 6 | 109.708µs | 13.708µs | —
+14 | 8 | 1 | 128.5µs | 15.958µs | —
+15 | 8 | 4 | 167.167µs | 35.917µs | —
+16 | 8 | 14 | 215.292µs | 44.542µs | —
+17 | 8 | 43 | 286.375µs | 67.5µs | —
+18 | 8 | 97 | 402.917µs | 113.375µs | —
+19 | 8 | 220 | 581.75µs | 175.292µs | —
+20 | 9 | 2 | 800.542µs | 215.375µs | —
+21 | 9 | 18 | 1.11825ms | 314.625µs | —
+22 | 9 | 62 | 1.576917ms | 455.292µs | —
+23 | 9 | 232 | 2.26225ms | 681.833µs | —
+24 | 10 | 2 | 3.1345ms | 868.417µs | —
+25 | 10 | 33 | 4.418417ms | 1.2795ms | —
+26 | 11 | 2 | 6.035333ms | 1.612041ms | —
+27 | 11 | 12 | 8.419875ms | 2.380708ms | —
+28 | 11 | 36 | 11.859333ms | 3.42975ms | —
+29 | 11 | 106 | 16.881125ms | 5.011125ms | —
+30 | 12 | 1 | 23.054708ms | 6.163666ms | —
+31 | 12 | 11 | 32.420333ms | 9.357166ms | —
+32 | 13 | 2 | 43.370875ms | 10.928542ms | —
+33 | 13 | 4 | 60.110167ms | 16.723709ms | —
+34 | 13 | 14 | 83.8445ms | 23.717375ms | —
+35 | 13 | 40 | 119.508875ms | 35.650167ms | —
+36 | 14 | 2 | 158.58425ms | 39.050958ms | —
+37 | 14 | 4 | 216.663792ms | 58.054292ms | —
+38 | 14 | 86 | 302.586167ms | 85.885542ms | —
+39 | 14 | 307 | 435.205417ms | 132.592125ms | —
+40 | 15 | 20 | 582.095458ms | 146.853666ms | —
+41 | 16 | 1 | 753.985708ms | 171.856875ms | —
+42 | 16 | 4 | 1.005178208s | 251.1575ms | —
+43 | 16 | 14 | 1.370434417s | 365.234792ms | —
+44 | 16 | 41 | 1.898456125s | 527.985583ms | —
+45 | 16 | 99 | 2.65892725s | 760.432458ms | —
+46 | 16 | 266 | 3.754344667s | 1.09538275s | −27.0%
+47 | 16 | 674 | 5.323797583s | 1.569402875s | −27.0%
+48 | 16 | 1505 | 7.559872875s | 2.236021333s | −30.2%
+49 | 16 | 3510 | 10.742565667s | 3.182645084s | −27.9%
+50 | 16 | 7726 | 15.253858333s | 4.511240916s | −27.2%
+51 | 17 | 14 | 20.514084958s | 5.260189583s | −25.8%
+52 | 17 | 50 | 27.935489083s | 7.421349291s | −25.9%
+53 | 17 | 156 | 38.382164125s | 10.446630417s | −26.0%
+54 | 18 | 2 | 50.524418458s | 12.142220916s | −24.7%
+55 | 18 | 8 | 1m7.502386667s | 16.977917167s | −24.8%

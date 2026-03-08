@@ -108,6 +108,33 @@ func (this *SSSet) MoveLR(move int) (SSSet, bool) {
 	return SSSet{this.Size, this.Weight + 1, dd}, true
 }
 
+// ApplyMoveLR is the in-place counterpart to MoveLR. It mutates the receiver,
+// marking position move as CLOSED and any newly-blocked positions as BLOCKED,
+// and incrementing Weight. It returns the list of positions changed from OPEN
+// to BLOCKED so the caller can undo them. The caller must guarantee move is OPEN.
+func (this *SSSet) ApplyMoveLR(move int) []int {
+	var blocked []int
+	for i, j := move-1, move+1; 1 <= i && j <= this.Size; i, j = i-1, j+1 {
+		if this.IsClosedAt(i) && this.Data[j] == OPEN {
+			this.Data[j] = BLOCKED
+			blocked = append(blocked, j)
+		}
+	}
+	this.Data[move] = CLOSED
+	this.Weight++
+	return blocked
+}
+
+// UndoMoveLR reverses an ApplyMoveLR call, restoring the receiver to the
+// state it was in before that call.
+func (this *SSSet) UndoMoveLR(move int, blocked []int) {
+	this.Data[move] = OPEN
+	this.Weight--
+	for _, j := range blocked {
+		this.Data[j] = OPEN
+	}
+}
+
 func (s SSSet) String() string {
 	return fmt.Sprintf("{%d %d %v}", s.Size, s.Weight, s.Data[1:s.Size+1])
 }
