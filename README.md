@@ -56,7 +56,10 @@ go build -o salemspencer .
 ./salemspencer -f 60        # same, short form
 ./salemspencer -parallel    # parallel search using all available CPU cores
 ./salemspencer -p           # same, short form
-./salemspencer -p -f 60 -n 75  # parallel, N=60..75
+./salemspencer -pipeline    # pipelined parallel: N+1 starts on idle cores while N straggles
+./salemspencer -pp          # same, short form
+./salemspencer -p -f 60 -n 75   # parallel, N=60..75
+./salemspencer -pp -f 60 -n 75  # pipelined parallel, N=60..75
 
 # Run tests
 go test ./...

@@ -39,8 +39,13 @@ go build -o salemspencer .
 ./salemspencer -parallel
 ./salemspencer -p
 
+# Run pipelined parallel search (N+1 starts on idle cores while N straggles)
+./salemspencer -pipeline
+./salemspencer -pp
+
 # Combine flags
 ./salemspencer -p -f 60 -n 75
+./salemspencer -pp -f 60 -n 75
 
 # Run all tests
 go test ./...
@@ -82,6 +87,8 @@ Two move methods exist:
 - `generateSubProblems(size)`: pre-runs two DFS levels to produce O(N²) independent `subProblem` values, providing enough granularity for good load distribution across workers.
 - `findMaxSetsParallel(size, began)`: fills a buffered channel with sub-problems, launches `runtime.GOMAXPROCS(0)` worker goroutines that drain it dynamically, waits with `sync.WaitGroup`, then prints one Markdown table row.
 - `mainSearchParallel(from, limit int)`: outer loop equivalent of `mainSearch(from, limit)`.
+
+**`sspipeline.go`** — Pipelined parallel alternative, selected by `-pipeline`/`-pp` flag. Uses per-N `pipeJobState` structs (replacing the globals in `ssparallel.go`) so N and N+1 can run concurrently with isolated state. A persistent worker pool drains a shared `chan pipeWorkItem`; an enqueuer goroutine submits N+1's sub-problems without waiting for N to complete, so idle cores pick up N+1's work while N's straggler finishes. The result collector (`for job := range jobs`) waits on each N's `WaitGroup` in order before printing, preserving sequential output.
 
 ## Key Design Decisions
 

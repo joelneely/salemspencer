@@ -119,9 +119,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "from (%d) must be at most limit (%d)\n", *fromFlag, *limitFlag)
 		os.Exit(1)
 	}
-	if *parallelFlag {
+	switch {
+	case *pipelineFlag:
+		mainSearchPipeline(*fromFlag, *limitFlag)
+	case *parallelFlag:
 		mainSearchParallel(*fromFlag, *limitFlag)
-	} else {
+	default:
 		mainSearch(*fromFlag, *limitFlag)
 	}
 }
